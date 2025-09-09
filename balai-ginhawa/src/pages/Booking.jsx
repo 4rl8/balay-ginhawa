@@ -1,8 +1,11 @@
 import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
 import bookBG from '../assets/images/bookBG.svg';
+import { CreateRooms } from "../components/Rooms";
+import { Cart } from "../components/Cart";
 
 export function Booking() {
+
   return (
     <>
       <title>Balai Ginhawa</title>
@@ -22,17 +25,17 @@ export function Booking() {
       </div>
 
       <div className="flex items-center justify-center mt-8">
-        <div className="bg-white border border-gray-300 rounded-md px-10 py-0 flex items-center space-x-4 w-[60%] h-14">
+        <div className="bg-white border border-gray-300 rounded-md px-10 py-0 flex items-center space-x-4 w-[70%] h-14">
           <span className="text-gray-700 font-medium">Check-in:</span>
           <input
             type="date"
-            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10"
+            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10 flex-1"
             placeholder="Check-in Date"
           />
           <span className="text-gray-700 font-medium">Check-out:</span>
           <input
             type="date"
-            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10"
+            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10 flex-1"
             placeholder="Check-out Date"
           />
           <button
@@ -43,6 +46,13 @@ export function Booking() {
           </button>
         </div>
       </div>
+
+
+      <div className="flex items mt-8 ml-72" >
+      <CreateRooms />
+      <Cart />
+      </div>
+
     </>
   );
 }
