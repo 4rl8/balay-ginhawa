@@ -9,9 +9,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
 
 function App() {
-
-// const docRef = doc(db, "cities", "LA");
-
   return (
     <>
       <Routes>
@@ -20,7 +17,7 @@ function App() {
         <Route path='/accommodations' element={<Accommodations />} />
         <Route path='/amenities' element={<Amenities />} />
         <Route path='/faqs' element={<FAQs />} />
-        <Route path='/booking' element={<Booking />} />
+        <Route path='/booking' element={<Booking />} /> 
       </Routes>
     </>
   );

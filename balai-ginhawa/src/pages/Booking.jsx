@@ -5,7 +5,6 @@ import { CreateRooms } from "../components/Rooms";
 import { Cart } from "../components/Cart";
 
 export function Booking() {
-
   return (
     <>
       <title>Balai Ginhawa</title>
@@ -49,8 +48,8 @@ export function Booking() {
 
 
       <div className="flex items mt-8 ml-72" >
-      <CreateRooms />
-      <Cart />
+        <CreateRooms />
+        <Cart />
       </div>
 
     </>

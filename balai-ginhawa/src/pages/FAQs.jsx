@@ -14,7 +14,7 @@ export function FAQs() {
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />
-        <div className="p-8 text-white px-30 py-10"  > 
+        <div className="p-24 text-white py-10"  > 
           <h1 className="text-4xl font-bold">FAQs</h1>
           <h2 className="text-2xl">Frequently Asked Questions</h2>
         </div>
