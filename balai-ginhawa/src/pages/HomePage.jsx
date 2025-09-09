@@ -14,7 +14,7 @@ export function HomePage() {
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />
-        <div className="p-8 text-white px-30 py-10"  > 
+        <div className="p-8 text-white px-20 py-8"  > 
           <h1 className="text-4xl font-bold">Your Perfect Stay</h1>
           <h2 className="text-2xl">Starts Here</h2>
         </div>

@@ -6,6 +6,7 @@ import {Amenities} from './pages/Amenities.jsx'
 import {FAQs} from './pages/FAQs.jsx'
 import {Booking} from './pages/Booking.jsx'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import {BookNow} from './pages/BookNow.jsx'
 
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path='/amenities' element={<Amenities />} />
         <Route path='/faqs' element={<FAQs />} />
         <Route path='/booking' element={<Booking />} />
+        <Route path='/book-now' element={<BookNow />} />
       </Routes>
     </>
   );
