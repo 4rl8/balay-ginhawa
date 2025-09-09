@@ -20,6 +20,29 @@ export function Booking() {
         </div>
         <img src={divider} alt="" className="w-full h-auto" />
       </div>
+
+      <div className="flex items-center justify-center mt-8">
+        <div className="bg-white border border-gray-300 rounded-md px-10 py-0 flex items-center space-x-4 w-[60%] h-14">
+          <span className="text-gray-700 font-medium">Check-in:</span>
+          <input
+            type="date"
+            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10"
+            placeholder="Check-in Date"
+          />
+          <span className="text-gray-700 font-medium">Check-out:</span>
+          <input
+            type="date"
+            className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10"
+            placeholder="Check-out Date"
+          />
+          <button
+            className="border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 w-full rounded-none"
+            style={{ maxWidth: "200px" }}
+          >
+            Find
+          </button>
+        </div>
+      </div>
     </>
   );
 }

@@ -10,6 +10,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
 function App() {
 
+// const docRef = doc(db, "cities", "LA");
+
   return (
     <>
       <Routes>
