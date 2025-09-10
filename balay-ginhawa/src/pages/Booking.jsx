@@ -6,8 +6,8 @@ import { Cart } from "../components/Cart";
 import { Button } from "@/components/button";
 
 
-
 export function Booking() {
+
   return (
     <>
       <title>Balai Ginhawa</title>
@@ -29,6 +29,7 @@ export function Booking() {
       <div className="flex items-center justify-center mt-8">
         <div className="bg-white border border-gray-300 rounded-md px-10 py-0 flex items-center space-x-4 w-[80%] h-14">
           <span className="text-gray-700 font-medium">Check-in:</span>
+        
           <input
             type="date"
             className="px-4 py-2 rounded border border-gray-300 focus:outline-none h-10 flex-1"
