@@ -9,7 +9,7 @@ export function Accommodations() {
       <div className="relative text-white">
         <img
           src={accomBG}
-          alt="Balai Ginhawa Logo"
+          alt="balay Ginhawa Logo"
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />

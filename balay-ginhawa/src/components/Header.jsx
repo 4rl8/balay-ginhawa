@@ -8,7 +8,7 @@ export function Header() {
       <nav className="flex items-center p-4 text-white h-25">
         {/* Logo on the left */}
         <div className="flex items-center h-full">
-          <img className="h-full ml-15" src={logo} alt="Balai Ginhawa Logo" />
+          <img className="h-full ml-15" src={logo} alt="balay Ginhawa Logo" />
         </div>
         {/* Nav links in the center */}
         <div className="flex-1 flex justify-center items-center h-full">

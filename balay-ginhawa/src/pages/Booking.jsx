@@ -10,12 +10,12 @@ export function Booking() {
 
   return (
     <>
-      <title>Balai Ginhawa</title>
+      <title>balay Ginhawa</title>
       <div className="relative">
 
         <img
           src={bookBG}
-          alt="Balai Ginhawa Logo"
+          alt="balay Ginhawa Logo"
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />
