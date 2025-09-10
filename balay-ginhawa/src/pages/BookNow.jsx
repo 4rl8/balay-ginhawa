@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import close from '../assets/images/close.svg';
 
+
 export function BookNow() {
     return (
         <>  
@@ -33,6 +34,7 @@ export function BookNow() {
                         className="px-4 py-2 rounded border border-gray-300 focus:outline-none w-full"
                         placeholder="Number of Guests"
                     />
+      
                 </div>
                 <button
                     className="border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 w-full rounded-none"

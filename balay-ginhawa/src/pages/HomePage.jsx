@@ -2,6 +2,7 @@ import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
 import homeBG from '../assets/images/homeBG.svg';
 
+
 export function HomePage() {
   return (
     <>
@@ -18,7 +19,7 @@ export function HomePage() {
           <h1 className="text-4xl font-bold">Your Perfect Stay</h1>
           <h2 className="text-2xl">Starts Here</h2>
         </div>
-        <img src={divider} alt="" className="w-full h-auto" />
+        <img src={divider} alt="" className="w-full h-auto" />\
       </div>
     </>
   );

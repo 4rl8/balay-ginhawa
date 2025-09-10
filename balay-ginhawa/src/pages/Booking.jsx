@@ -3,6 +3,9 @@ import divider from '../assets/images/divider.svg';
 import bookBG from '../assets/images/bookBG.svg';
 import { CreateRooms } from "../components/Rooms";
 import { Cart } from "../components/Cart";
+import { Button } from "@/components/button";
+
+
 
 export function Booking() {
   return (
@@ -60,6 +63,8 @@ export function Booking() {
         <CreateRooms />
         <Cart />
       </div>
+
+      <Button>Book Now</Button>
 
     </>
   );
