@@ -12,7 +12,7 @@ export function Booking() {
     <>
       <title>balay Ginhawa</title>
       <div className="relative">
-npm  run
+
         <img
           src={bookBG}
           alt="balay Ginhawa Logo"
