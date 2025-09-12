@@ -1,5 +1,7 @@
-import { FrontDeskHeader } from "../components/FrontDeskHeader";
-import { FrontDeskSidePanel } from "../components/FrontDeskSidePanel";
+
+import { FrontDeskHeader } from "@/components/FrontDeskHeader";
+import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
+
 
 export function FrontDeskNotifications() {
   return (

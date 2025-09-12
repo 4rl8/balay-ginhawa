@@ -1,5 +1,5 @@
 import { BookOpenIcon, BuildingOffice2Icon, CurrencyDollarIcon, BellIcon } from '@heroicons/react/24/outline';
-import {Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const navItems = [
   { label: 'Bookings', icon: BookOpenIcon, path: '/frontdesk' },
@@ -17,19 +17,17 @@ export function FrontDeskSidePanel({ active = 'Bookings' }) {
           const isActive = label === active;
           return (
             <li key={label}>
-                <Link
-                    to={path}
-                    className={`flex items-center px-4 py-2 ${
-                  isActive
+              <Link
+                to={path}
+                className={`flex items-center px-4 py-2 ${isActive
                     ? 'bg-green-600 text-white'
                     : 'text-black hover:bg-gray-100'
-                }`}
+                  }`}
               >
-                <Icon className="h-6 w-6 mr-3" />
+                {Icon && <Icon className="h-6 w-6 mr-3" />}
                 <span>{label}</span>
-                </Link>
+              </Link>
             </li>
-            
           );
         })}
       </ul>

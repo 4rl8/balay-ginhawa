@@ -1,7 +1,7 @@
-import { FrontDeskHeader } from "../components/FrontDeskHeader";
-import { FrontDeskSidePanel } from "../components/FrontDeskSidePanel";
-import Table from "../components/Table";
 
+import { FrontDeskHeader } from "@/components/FrontDeskHeader";
+import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
+import Table from "@/components/Table";
 export function FrontDeskRooms() {
     const headers = ["Room No.", "Type", "Status", "Guest", "Check Out Data", "Statys"];
     const rows = [

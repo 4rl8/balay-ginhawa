@@ -7,10 +7,10 @@ import {FAQs} from './pages/FAQs.jsx'
 import {Booking} from './pages/Booking.jsx'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import {BookNow} from './pages/BookNow.jsx'
-import { FrontDeskBookings } from './pages/FrontDeskBookings'
-import { FrontDeskRooms } from './pages/FrontDeskRooms.jsx'
-import { FrontDeskPayments } from './pages/FrontDeskPayments.jsx'
-import { FrontDeskNotifications } from './pages/FrontDeskNotifications'
+import { FrontDeskBookings } from './pages/front-desk/FrontDeskBookings'
+import { FrontDeskRooms } from './pages/front-desk/FrontDeskRooms.jsx'
+import { FrontDeskPayments } from './pages/front-desk/FrontDeskPayments.jsx'
+import { FrontDeskNotifications } from './pages/front-desk/FrontDeskNotifications'
 
 
 

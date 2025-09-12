@@ -1,6 +1,7 @@
-import { FrontDeskHeader } from "../components/FrontDeskHeader";
-import { FrontDeskSidePanel } from "../components/FrontDeskSidePanel";
-import Table from "../components/Table";
+
+import { FrontDeskHeader } from "@/components/FrontDeskHeader";
+import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
+import Table from "@/components/Table";
 
 export function FrontDeskPayments() {
     const headers = ["Guest Name","Room No.", "Payment Type", "Description", "Amount", "Date", "Action"];
