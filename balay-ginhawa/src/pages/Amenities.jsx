@@ -1,19 +1,20 @@
 import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
-import homeBG from '../assets/images/homeBG.svg';
-import restoBar from '../assets/images/restoBar.svg';
+import amenBG from '../assets/images/amenBG.svg';
+import breakfast from '../assets/images/breakfast.svg';
 import wifi from '../assets/images/wifi.svg';
 import roomService from '../assets/images/roomService.svg';
+import dailyService from '../assets/images/dailyService.svg';
+import fitness from '../assets/images/fitness.svg';
 
 export function Amenities() {
   return (
     <>
-      <>
         <title>balay Ginhawa</title>
         <div className="relative">
 
           <img
-            src={homeBG}
+            src={amenBG}
             alt="balay Ginhawa Logo"
             className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
           />
@@ -25,36 +26,46 @@ export function Amenities() {
           <img src={divider} alt="" className="w-full h-auto" />
         </div>
 
-        <div className=" w-full flex gap-5 p-8 px-10 py-8">
-          <div className=" w-full flex-col gap-5 p-8 px-10 py-8">
-            <img src={restoBar} alt="" className="w-100% h-auto" />
-            <div className=" p-8 text-black px-10 py-8"  >
-              <img></img>
-              <h3>Resto Bar</h3>
-              <p>Enjoy a variety of delicious meals and refreshing drinks at our in-house restaurant and bar.</p>
-            </div>
-          </div>
-          <div className=" w-full flex-col gap-5 p-8 px-10 py-8">
-            <img src={roomService} alt="" className="w-100% h-auto" />
-                 <div className=" p-8 text-black px-10 py-8"  >
-              <img></img>
-              <h3>Room Service</h3>
-              <p>Indulge in our 24-hour room service, offering a wide selection of meals and beverages delivered right to your door.</p>
-            </div>
-          </div>
-          <div className=" w-full flex-col gap-5 p-8 px-10 py-8">
-            <img src={wifi} alt="" className="w-100% h-auto" />
-                 <div className=" p-8 text-black px-10 py-8"  >
-              <img></img>
-              <h3>Wifi</h3>
-              <p>Stay connected with our high-speed wifi available throughout the property.</p>
-            </div>
-          </div>
+         <div className="w-full flex flex-row gap-5 p-8 justify-center items-start">
+    
+        <div className="flex flex-col items-center gap-5 w-1/3">
+          <img src={roomService} alt="" className="w-72 h-auto m-auto" />
+          <h3 className="text-center w-72 text-xl font-bold">Room Service</h3>
+          <p className="text-center w-72">
+            Indulge in our 24-hour room service, offering a wide selection of meals and beverages delivered right to your door.
+          </p>
         </div>
+      
+        <div className="flex flex-col items-center gap-5 w-1/3">
+          <img src={wifi} alt="" className="w-72 h-auto m-auto" />
+          <h3 className="text-center w-72 text-xl font-bold">Wifi</h3>
+          <p className="text-center w-72">
+            Stay connected with our high-speed wifi available throughout the property.
+          </p>
+        </div>
+      </div>
 
 
+      <div className="w-full flex flex-row gap-20 p-8 justify-center items-start pt-30">
+        <div className="w-80 text-center">
+          <img src={breakfast} alt="" className="w-96 h-auto m-auto" />
+          <p className="text-xl font-bold pt-5 pb-5">Complementary Breakfast</p>
+          <p>Stay connected effortlessly throughout the property.</p>
+        </div>
+        <div className="w-80 text-center">
+          <img src={dailyService} alt="" className="w-96 h-auto m-auto" />
+          <p className="text-xl font-bold pt-5 pb-5">Complementary Breakfast</p>
+          <p>Stay connected effortlessly throughout the property.</p>
+        </div>
+        <div className="w-80 text-center">
+          <img src={fitness} alt="" className="w-96 h-auto m-auto" />
+          <p className="text-xl font-bold pt-5 pb-5">Complementary Breakfast</p>
+          <p>Stay connected effortlessly throughout the property.</p>
+        </div>
+      </div>
 
-      </>
+
+  
     </>
   );
 }

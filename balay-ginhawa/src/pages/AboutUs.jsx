@@ -1,7 +1,7 @@
 import { Header } from "../components/Header";
 import homeBG from '../assets/images/homeBG.svg';
 import divider from '../assets/images/divider.svg';
-
+  
 
 export function AboutUs() {
   return (
