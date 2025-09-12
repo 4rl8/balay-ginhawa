@@ -7,6 +7,10 @@ import {FAQs} from './pages/FAQs.jsx'
 import {Booking} from './pages/Booking.jsx'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import {BookNow} from './pages/BookNow.jsx'
+import { FrontDeskBookings } from './pages/FrontDeskBookings'
+import { FrontDeskRooms } from './pages/FrontDeskRooms.jsx'
+import { FrontDeskPayments } from './pages/FrontDeskPayments.jsx'
+import { FrontDeskNotifications } from './pages/FrontDeskNotifications'
 
 
 
@@ -21,6 +25,10 @@ function App() {
         <Route path='/faqs' element={<FAQs />} />
         <Route path='/booking' element={<Booking />} />
         <Route path='/book-now' element={<BookNow />} />
+        <Route path='/frontdesk' element={<FrontDeskBookings />} />
+        <Route path='/frontdesk/rooms' element={<FrontDeskRooms />} />
+        <Route path='/frontdesk/payments' element={<FrontDeskPayments />} />
+        <Route path='/frontdesk/notifications' element={<FrontDeskNotifications />} />
       </Routes>
     </>
   );
