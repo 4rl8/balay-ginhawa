@@ -101,7 +101,7 @@ export default function Table({ headers, rows }) {
   };
 
   return (
-    <table className="min-w-full bg-white rounded-xl overflow-hidden shadow-md mt-4 text-center">
+    <table className="min-w-full bg-white rounded-xl shadow-md mt-4 text-center">
       <thead className="bg-white">
         <tr>
           {headers.map((header, index) => (
