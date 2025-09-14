@@ -82,7 +82,7 @@ export default function Dropdown({ roomNo, onSelect, onAddTask }) {
       {/* Add Task Button */}
       <button
         onClick={() => setShowPopup(true)}
-        className="mt-1 w-full text-sm font-medium underline text-blue-600 hover:text-blue-800"
+        className="mt-1 w-full text-sm font-medium underline hover:text-gray-500"
       >
         + Add Task
       </button>

@@ -100,26 +100,27 @@ export default function Table({ headers, rows }) {
     return "⇅";
   };
 
-  return (
-    <table className="min-w-full bg-white rounded-xl shadow-md mt-4 text-center">
-      <thead className="bg-white">
-        <tr>
+return (
+  <div className="shadow-md mt-4 bg-white rounded-xl border border-gray-300">
+    <table className="min-w-full text-center border-collapse">
+      <thead className="bg-white border-b border-gray-200">
+        <tr className="divide-x divide-gray-200">
           {headers.map((header, index) => (
             <th
               key={index}
               onClick={() => handleSort(index)}
-              className="border px-4 py-2 font-semibold cursor-pointer select-none"
+              className="px-4 py-2 font-semibold cursor-pointer select-none first:rounded-tl-xl last:rounded-tr-xl"
             >
               {header} {getArrow(index)}
             </th>
           ))}
         </tr>
       </thead>
-      <tbody>
+      <tbody className="divide-y divide-gray-200">
         {sortedRows.map((row, rowIndex) => (
-          <tr key={rowIndex}>
+          <tr key={rowIndex} className="divide-x divide-gray-200">
             {row.map((cell, cellIndex) => (
-              <td key={cellIndex} className="border px-4 py-2">
+              <td key={cellIndex} className="px-4 py-2">
                 {cell}
               </td>
             ))}
@@ -127,5 +128,9 @@ export default function Table({ headers, rows }) {
         ))}
       </tbody>
     </table>
-  );
+  </div>
+);
+
+
+
 }

@@ -20,7 +20,7 @@ export default function Popup({ isOpen, onClose, children }) {
     // Background overlay
     // Kapag pinindot ang area na ito (outside sa white box), magsasara ang popup
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Popup container
