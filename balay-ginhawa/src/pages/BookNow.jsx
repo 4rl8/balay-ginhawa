@@ -6,6 +6,9 @@ export function BookNow() {
     return (
         <>  
         <Link to="/"><img src={close} className='ml-auto mr-[10%] py-[5%]' /></Link>
+
+        <h1 className='text-center text-3xl font-bold pb-10'>BOOK YOUR STAY</h1>
+
         <div className="flex justify-center items-center">
             <div className="bg-white border border-gray-300 rounded-md px-10 py-8 flex flex-col items-center w-[40%]">
                 <div className="flex flex-row items-center w-full mb-4 space-x-4">
