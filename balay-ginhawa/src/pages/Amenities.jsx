@@ -54,13 +54,13 @@ export function Amenities() {
         </div>
         <div className="w-80 text-center">
           <img src={dailyService} alt="" className="w-96 h-auto m-auto" />
-          <p className="text-xl font-bold pt-5 pb-5">Complementary Breakfast</p>
-          <p>Stay connected effortlessly throughout the property.</p>
+          <p className="text-xl font-bold pt-5 pb-5">Daily Housekeeping</p>
+          <p>Clean, comfortable spaces every day.</p>
         </div>
         <div className="w-80 text-center">
           <img src={fitness} alt="" className="w-96 h-auto m-auto" />
-          <p className="text-xl font-bold pt-5 pb-5">Complementary Breakfast</p>
-          <p>Stay connected effortlessly throughout the property.</p>
+          <p className="text-xl font-bold pt-5 pb-5">Fitness Center</p>
+          <p>Stay on track with your workout routine.</p>
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Header } from "../components/Header";
 import accomBG from '../assets/images/accomBG.svg';
 import divider from '../assets/images/divider.svg';
@@ -36,6 +37,8 @@ const rooms = [
 ];
 
 export function Accommodations() {
+  const [modalImg, setModalImg] = useState(null);
+
   return (
     <>
       <title>Accommodations</title>
@@ -68,7 +71,8 @@ export function Accommodations() {
               <img
                 src={room.img}
                 alt={room.title}
-                className="w-full h-[30vh] object-cover rounded-md mb-4"
+                className="w-full h-[30vh] object-cover rounded-md mb-4 cursor-pointer"
+                onClick={() => setModalImg(room.img)}
               />
               <h2 className="text-xl font-bold mb-2 text-gray-800 text-left w-full">{room.title}</h2>
               <p className="text-gray-600 text-left w-full">{room.desc}</p>
@@ -76,6 +80,43 @@ export function Accommodations() {
           ))}
         </div>
       </div>
+
+      {modalImg && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          {/* Dimmer background, more opacity */}
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity duration-300"
+            onClick={() => setModalImg(null)}
+            style={{ zIndex: 50 }}
+          />
+          {/* Animated image popup without shadow */}
+          <img
+            src={modalImg}
+            alt="Room Preview"
+            className="w-[180vw] max-w-none h-auto max-h-[90vh] rounded-lg transition-all duration-300 scale-100 animate-fade-in"
+            style={{ zIndex: 51, position: "relative" }}
+          />
+          <button
+            className="absolute top-6 right-8 text-white text-4xl font-bold bg-black/40 rounded-full px-4 py-2"
+            onClick={() => setModalImg(null)}
+            aria-label="Close"
+            style={{ zIndex: 52 }}
+          >
+            &times;
+          </button>
+          <style>
+            {`
+              @keyframes fade-in {
+                from { opacity: 0; transform: scale(0.85);}
+                to { opacity: 1; transform: scale(1);}
+              }
+              .animate-fade-in {
+                animation: fade-in 0.2s ease;
+              }
+            `}
+          </style>
+        </div>
+      )}
     </>
   );
 }
