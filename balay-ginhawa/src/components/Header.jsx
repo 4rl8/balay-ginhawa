@@ -6,11 +6,11 @@ export function Header() {
   return (
     <header>
       <nav className="flex items-center p-4 text-white h-25">
-        {/* Logo on the left */}
+
         <div className="flex items-center h-full">
           <img className="h-full ml-15" src={logo} alt="balay Ginhawa Logo" />
         </div>
-        {/* Nav links in the center */}
+   
         <div className="flex-1 flex justify-center items-center h-full">
           <ul className="flex space-x-4 h-full items-center">
             <li className="list-none">
@@ -75,7 +75,6 @@ export function Header() {
             </li>
           </ul>
         </div>
-        {/* Book Now button on the right */}
         <Link to="/book-now">
           <button className="border-2 border-white text-white bg-transparent py-2 px-4 rounded-3xl  h-11">
             Book Now

@@ -1,9 +1,8 @@
 import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
 import bookBG from '../assets/images/bookBG.svg';
-import { CreateRooms } from "../components/Rooms";
-import { Cart } from "../components/Cart";
-import { Button } from "@/components/button";
+import { Rooms } from "../components/Rooms";
+
 
 
 export function Booking() {
@@ -60,10 +59,9 @@ export function Booking() {
       </div>
 
 
-      <div className="flex items mt-8 ml-[15%]" >
-        <CreateRooms />
-        <Cart />
+      <div>
+        <Rooms />
       </div>
     </>
-  );
+  )
 }

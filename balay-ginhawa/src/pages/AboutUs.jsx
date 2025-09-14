@@ -1,8 +1,8 @@
-import { Header } from "../components/Header";
-import homeBG from '../assets/images/homeBG.svg';
+import { Header } from "../components/Header"; 
 import divider from '../assets/images/divider.svg';
 import aboutImg from '../assets/images/aboutImg.svg';
 import aboutImg2 from '../assets/images/aboutImg2.svg';
+import aboutBG from '../assets/images/aboutBG.svg';
 
 
 export function AboutUs() {
@@ -12,7 +12,7 @@ export function AboutUs() {
       <div className="relative">
 
         <img
-          src={homeBG}
+          src={aboutBG}
           alt="balay Ginhawa Logo"
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />

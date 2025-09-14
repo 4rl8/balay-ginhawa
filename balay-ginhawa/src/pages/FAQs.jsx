@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
-import homeBG from '../assets/images/homeBG.svg';
+import FAQsBG from '../assets/images/FAQsBG.svg';
 import dropdown from '../assets/images/dropdown.svg';
+
 
 const faqs = [
   {
@@ -35,7 +36,7 @@ export function FAQs() {
       <title>balay Ginhawa</title>
       <div className="relative">
         <img
-          src={homeBG}
+          src={FAQsBG}
           alt="balay Ginhawa Logo"
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
