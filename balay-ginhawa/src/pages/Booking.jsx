@@ -64,9 +64,6 @@ export function Booking() {
         <CreateRooms />
         <Cart />
       </div>
-
-      <Button>Book Now</Button>
-
     </>
   );
 }
