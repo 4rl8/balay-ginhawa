@@ -101,10 +101,10 @@ export default function Table({ headers, rows }) {
   };
 
 return (
-  <div className="shadow-md mt-4 bg-white rounded-xl border border-gray-300">
+  <div className="shadow-md mt-4 bg-white rounded-xl">
     <table className="min-w-full text-center border-collapse">
       <thead className="bg-white border-b border-gray-200">
-        <tr className="divide-x divide-gray-200">
+        <tr>
           {headers.map((header, index) => (
             <th
               key={index}
@@ -116,9 +116,9 @@ return (
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-200">
+      <tbody className="divide-y divide-gray-200 ">
         {sortedRows.map((row, rowIndex) => (
-          <tr key={rowIndex} className="divide-x divide-gray-200">
+          <tr key={rowIndex}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="px-4 py-2">
                 {cell}
