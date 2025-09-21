@@ -3,16 +3,43 @@ import homeBG from '../assets/images/homeBG.svg';
 import homeimg1 from '../assets/images/home-img1.svg';
 import homeimg2 from '../assets/images/home-img2.svg';
 import homeimg3 from '../assets/images/home-img3.svg';
+// import { db } from "@/config/firebase-config";
+// import { useState } from "react";
+// import { useEffect } from "react";
+// import { collection, getDocs } from "firebase/firestore";
+
  
 
 export function HomePage() {
+
+
+  // const [rooms, setRooms] = useState([]);
+
+  // // read data from firestore
+  // useEffect(() => {
+  //   const fetchRooms = async () => {
+  //     const roomsCollection = collection(db, "rooms");
+  //     try {
+  //       const roomSnapshot = await getDocs(roomsCollection);
+  //       const roomList = roomSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  //       setRooms(roomList);
+  //     } catch (error) {
+  //       console.error("Error fetching rooms:", error);
+  //     }
+  //   };  
+
+  //   fetchRooms();
+      
+  // }, []);
+
+
   return (
     <>
       <title>balay Ginhawa</title>
       <div className="relative">
 
         <img
-          src={homeBG}
+          src={homeBG} 
           alt="balay Ginhawa Logo"
           className="absolute top-0 left-0 w-full h-90 object-cover -z-10"  
         />

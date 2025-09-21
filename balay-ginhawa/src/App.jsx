@@ -11,10 +11,20 @@ import { FrontDeskBookings } from './pages/front-desk/FrontDeskBookings'
 import { FrontDeskRooms } from './pages/front-desk/FrontDeskRooms.jsx'
 import { FrontDeskPayments } from './pages/front-desk/FrontDeskPayments.jsx'
 import { FrontDeskNotifications } from './pages/front-desk/FrontDeskNotifications'
+// import { db } from './config/firebase-config'
+// import { useEffect } from 'react'
+// import { onSnapshot, collection } from 'firebase/firestore'
 
 
 
 function App() {
+
+  // useEffect (() => {  
+  //   onSnapshot(collection(db, "bookings"), (snapshot) => {
+  //     console.log(snapshot.docs.map((doc) => ({...doc.data(), id: doc.id})));
+  //   });
+  // }, []);
+
   return (
     <>
       <Routes>

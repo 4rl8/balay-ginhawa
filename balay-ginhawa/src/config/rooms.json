@@ -1,0 +1,354 @@
+{
+  "rooms": {
+    "R001": {
+      "roomNumber": "R001",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R002": {
+      "roomNumber": "R002",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R003": {
+      "roomNumber": "R003",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R004": {
+      "roomNumber": "R004",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R005": {
+      "roomNumber": "R005",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R006": {
+      "roomNumber": "R006",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R007": {
+      "roomNumber": "R007",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R008": {
+      "roomNumber": "R008",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R009": {
+      "roomNumber": "R009",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R010": {
+      "roomNumber": "R010",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R011": {
+      "roomNumber": "R011",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R012": {
+      "roomNumber": "R012",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R013": {
+      "roomNumber": "R013",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R014": {
+      "roomNumber": "R014",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R015": {
+      "roomNumber": "R015",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R016": {
+      "roomNumber": "R016",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R017": {
+      "roomNumber": "R017",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R018": {
+      "roomNumber": "R018",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R019": {
+      "roomNumber": "R019",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R020": {
+      "roomNumber": "R020",
+      "roomTypeId": "Standard",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R021": {
+      "roomNumber": "R021",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R022": {
+      "roomNumber": "R022",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R023": {
+      "roomNumber": "R023",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "booked",
+      "status": "active"
+    },
+    "R024": {
+      "roomNumber": "R024",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R025": {
+      "roomNumber": "R025",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R026": {
+      "roomNumber": "R026",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R027": {
+      "roomNumber": "R027",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R028": {
+      "roomNumber": "R028",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R029": {
+      "roomNumber": "R029",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R030": {
+      "roomNumber": "R030",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R031": {
+      "roomNumber": "R031",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R032": {
+      "roomNumber": "R032",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R033": {
+      "roomNumber": "R033",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R034": {
+      "roomNumber": "R034",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R035": {
+      "roomNumber": "R035",
+      "roomTypeId": "Twin",
+      "pricePerNight": 3000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R036": {
+      "roomNumber": "R036",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R037": {
+      "roomNumber": "R037",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R038": {
+      "roomNumber": "R038",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R039": {
+      "roomNumber": "R039",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R040": {
+      "roomNumber": "R040",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R041": {
+      "roomNumber": "R041",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R042": {
+      "roomNumber": "R042",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R043": {
+      "roomNumber": "R043",
+      "roomTypeId": "Deluxe",
+      "pricePerNight": 3500,
+      "availability": "available",
+      "status": "active"
+    },
+    "R044": {
+      "roomNumber": "R044",
+      "roomTypeId": "Family Suite",
+      "pricePerNight": 6000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R045": {
+      "roomNumber": "R045",
+      "roomTypeId": "Family Suite",
+      "pricePerNight": 6000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R046": {
+      "roomNumber": "R046",
+      "roomTypeId": "Family Suite",
+      "pricePerNight": 6000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R047": {
+      "roomNumber": "R047",
+      "roomTypeId": "Family Suite",
+      "pricePerNight": 6000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R048": {
+      "roomNumber": "R048",
+      "roomTypeId": "Family Suite",
+      "pricePerNight": 6000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R049": {
+      "roomNumber": "R049",
+      "roomTypeId": "Penthouse",
+      "pricePerNight": 12000,
+      "availability": "available",
+      "status": "active"
+    },
+    "R050": {
+      "roomNumber": "R050",
+      "roomTypeId": "Penthouse",
+      "pricePerNight": 12000,
+      "availability": "available",
+      "status": "active"
+    }
+  }
+}
