@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { db } from "../config/firebase-config";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 //Tailwind by KhyteGpt
 // A specialized Dropdown component for Status + Add Task Popup -KhyteGpt
 export default function Dropdown({ roomNo, onSelect, onAddTask }) {
@@ -37,13 +39,25 @@ export default function Dropdown({ roomNo, onSelect, onAddTask }) {
   //icheck kung may laman si taskDescription gamit trim() para walang extra spaces
   //kung may laman, tatawagin si onAddTask callback (kung meron) at ipapasa yung object na may roomNo at description
   //ire-reset ang taskDescription para malinis ulit yung input box then isasara yung popup
-  const handleAddTask = () => {
-    if (taskDescription.trim()) {
-      onAddTask?.({ roomNo, taskDescription });
+  // Save to housekeepingTasks collection
+const handleAddTask = async () => {
+  if (taskDescription.trim()) {
+    try {
+      await addDoc(collection(db, "housekeepingTasks"), {
+        roomId: roomNo,
+        task: taskDescription,
+        status: "pending",
+        assignmentAt: serverTimestamp(),
+      });
+
       setTaskDescription("");
       setShowPopup(false);
+    } catch (err) {
+      console.error("Error adding task:", err);
     }
-  };
+  }
+};
+
 
   return (
     <div className="relative inline-block text-left w-32">

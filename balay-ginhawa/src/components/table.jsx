@@ -64,11 +64,27 @@ export default function Table({ headers, rows }) {
   //if sortConfig.key is not null or walang laman or di napindot then as is lang siya pero ichecheck niya muna
   if (sortConfig.key !== null) {
   //ginamit ang getComparator para makuha yung function na gagamitin sa sorting
-    sortedRows.sort(getComparator(sortConfig.key));
-    if (sortConfig.direction === "desc") {
-      sortedRows.reverse();
+  sortedRows.sort((a, b) => {
+    const valA = a[a.length - 1]; // last column value
+    const valB = b[b.length - 1];
+
+    // Try parsing as Date
+    const dateA = new Date(valA);
+    const dateB = new Date(valB);
+
+    if (!isNaN(dateA) && !isNaN(dateB)) {
+      return dateB - dateA; // latest first
     }
+
+    // If not a date, fallback to string compare (desc)
+    return String(valB).localeCompare(String(valA));
+  });
+} else {
+  sortedRows.sort(getComparator(sortConfig.key));
+  if (sortConfig.direction === "desc") {
+    sortedRows.reverse();
   }
+}
 
   //handleSort is function na tinatawag pag pinindot ang header
   //index is yung column index na pinindot
@@ -101,10 +117,10 @@ export default function Table({ headers, rows }) {
   };
 
 return (
-  <div className="shadow-md mt-4 bg-white rounded-xl border border-gray-300">
+  <div className="shadow-md mt-4 bg-white rounded-xl">
     <table className="min-w-full text-center border-collapse">
       <thead className="bg-white border-b border-gray-200">
-        <tr className="divide-x divide-gray-200">
+        <tr>
           {headers.map((header, index) => (
             <th
               key={index}
@@ -116,9 +132,9 @@ return (
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-200">
+      <tbody className="divide-y divide-gray-200 ">
         {sortedRows.map((row, rowIndex) => (
-          <tr key={rowIndex} className="divide-x divide-gray-200">
+          <tr key={rowIndex}>
             {row.map((cell, cellIndex) => (
               <td key={cellIndex} className="px-4 py-2">
                 {cell}
