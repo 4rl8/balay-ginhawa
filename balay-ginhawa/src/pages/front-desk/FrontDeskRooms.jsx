@@ -82,7 +82,7 @@ export function FrontDeskRooms() {
       // Ina-update din local state para agad mag reflect sa UI nang hindi nag re reload
       setRows((prevRows) =>
         prevRows.map((row, i) =>
-          i === rowIndex ? [...row.slice(0, 4), newAvailability, ...row.slice(5)] : row
+          i === rowIndex ? [...row.slice(0, 3), newAvailability, ...row.slice(4)] : row
         )
       );
     } catch (err) {
