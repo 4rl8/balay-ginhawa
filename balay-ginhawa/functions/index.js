@@ -47,7 +47,7 @@
 //         headers: {
 //           accept: "application/json",
 //           "Content-Type": "application/json",
-//           authorization: "Basic " + Buffer.from("sk_test_ZM26eeASx66vWd8nN6i6wq3y").toString("base64"),
+//           authorization: "Basic " + Buffer.from("").toString("base64"),
 //         },
 //         body: JSON.stringify({
 //           data: {
