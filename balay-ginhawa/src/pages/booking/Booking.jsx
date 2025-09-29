@@ -86,7 +86,7 @@ const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
     const response = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
-        "Authorization": "Basic " + btoa("sk_test_Yx7vEykzfpfHNe46akAccQEA:"),
+        "Authorization": "Basic " + btoa(`${import.meta.env.VITE_PAYMONGO_SECRET_KEY}:`),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
