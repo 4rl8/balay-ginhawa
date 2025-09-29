@@ -1,24 +1,30 @@
 import { useState } from "react";
 import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
-import card from '../assets/images/card.png';
-import gcash from '../assets/images/gcash.png';
-import maya from '../assets/images/maya.png';
 import bookBG from '../assets/images/bookBG.svg';
-// import standard from '../assets/images/standardImg.png';
-// import twin from '../assets/images/twinImg.png';
-// import deluxe from '../assets/images/deluxeImg.png';
-// import familySuite from '../assets/images/familySuiteImg.png';
-// import pentHouse from '../assets/images/pentHouseImg.png';
+import standard from '../assets/images/standardImg.svg';
+import twin from '../assets/images/twinImg.svg';
+import deluxe from '../assets/images/deluxeImg.svg';
+import familySuite from '../assets/images/familySuiteImg.svg';
+import pentHouse from '../assets/images/pentHouseImg.svg';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { db } from "../config/firebase-config";
-import { collection, getDocs, addDoc } from "firebase/firestore";
-
+import { collection, getDocs, } from "firebase/firestore";
+//tinanggal ko muna addDOc 
+  
 
 function isOverlapping(checkIn, checkOut, existingCheckIn, existingCheckOut) {
   return checkIn < existingCheckOut && checkOut > existingCheckIn;
 }
+
+const roomTypes = [
+  { id: "Standard", label: "Standard", img: standard, price: 3000 },
+  { id: "Twin", label: "Twin", img: twin, price: 3000 },
+  { id: "Deluxe", label: "Deluxe", img: deluxe, price: 3500 },
+  { id: "FamilySuite", label: "Family Suite", img: familySuite, price: 6000 },
+  { id: "PentHouse", label: "Penthouse", img: pentHouse, price: 12000 }
+];
 
 export function Booking() {
   const [availableByType, setAvailableByType] = useState({});
@@ -31,10 +37,17 @@ export function Booking() {
     name: "",
     email: "",
     phone: "",
+    foodPackage: "no",
+    payment: ""
   });
+  const [activeTypes, setActiveTypes] = useState(roomTypes.map(rt => rt.id));
+  const [findClicked, setFindClicked] = useState(false);
+  
+
 
   async function findAvailableRooms() {
     if (!checkIn || !checkOut) return;
+    setFindClicked(true);
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -67,8 +80,14 @@ export function Booking() {
 
   function handleBook(roomTypeId) {
     const freeRooms = availableByType[roomTypeId];
-    if (!freeRooms?.length) return;
-    setSelectedRoom({ ...freeRooms[0], roomTypeId });
+    // Find the room type details for price
+    const roomTypeDetails = roomTypes.find(rt => rt.id === roomTypeId);
+    if (!roomTypeDetails) return;
+    setSelectedRoom({
+      ...roomTypeDetails,
+      ...freeRooms?.[0], // merge Firestore room info if available
+      roomTypeId
+    });
     setShowCheckout(true);
   }
 
@@ -77,20 +96,63 @@ export function Booking() {
   }
 
   async function handleCheckout() {
-    await addDoc(collection(db, "bookings"), {
-      roomId: selectedRoom.id,
-      checkIn,
-      checkOut,
-      guests,
-      guestInfo,
-      createdAt: new Date()
-    });
-    window.location.href = "https://paymongo.com/sandbox/payment";
+
+  const response = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Basic " + btoa("sk_test_ZM26eeASx66vWd8nN6i6wq3y:"),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      data: {
+        attributes: {
+          line_items: [
+            {
+              name: "Booking Payment",
+              quantity: 1,
+              amount: 300000, // centavos
+              currency: "PHP"
+            }
+          ],
+          payment_method_types: ["gcash", "card", "paymaya"],
+          success_url: "http://localhost:5173/success",
+          cancel_url: "http://localhost:5173/cancel"
+        }
+      }
+    })
+  });
+
+  const result = await response.json();
+  console.log(result);
+
+  if (result.data) {
+    window.location.href = result.data.attributes.checkout_url;
+  } else {
+    alert("Error: " + JSON.stringify(result));
   }
+}
+  //   await addDoc(collection(db, "bookings"), {
+  //     roomId: selectedRoom.id,
+  //     checkIn,
+  //     checkOut,
+  //     guests,
+  //     guestInfo,
+  //     createdAt: new Date()
+  //   });
+  //   window.location.href = "https://paymongo.com/sandbox/payment";
+  // }
 
   function handleBack() {
     setShowCheckout(false);
     setSelectedRoom(null);
+  }
+
+  function handleTypeFilterChange(typeId) {
+    setActiveTypes(prev =>
+      prev.includes(typeId)
+        ? prev.filter(id => id !== typeId)
+        : [...prev, typeId]
+    );
   }
 
   return (
@@ -156,11 +218,11 @@ export function Booking() {
             />
             {/* Button */}
             <button
-              className="border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 w-full"
-              style={{ maxWidth: "200px" }}
+              className="border-2 border-blue-500 text-white py-2 px-6 w-full"
+              style={{ maxWidth: "200px", backgroundColor: "#82A33D", borderColor: "#82A33D" }}
               onClick={findAvailableRooms}
             >
-              Find Rooms
+              FIND
             </button>
           </div>
         </div>
@@ -171,52 +233,81 @@ export function Booking() {
         {/* Rooms Container */}
         {!showCheckout && (
           <div className="w-full md:w-[70%]">
-            {Object.keys(availableByType).map(roomTypeId => (
-              <div key={roomTypeId} className="room-card mb-8">
-                <h2 className="text-2xl font-bold">{roomTypeId}</h2>
-                <p>{availableByType[roomTypeId].length} available</p>
-                <div className="bg-white border border-gray-300 rounded-md w-full p-8 flex mt-4">
-                  <div className="w-2/3 flex items-center justify-center">
-                    <img
-                      src={bookBG}
-                      alt="Room"
-                      className="w-full h-80 object-cover rounded-md"
-                    />
+            {roomTypes
+              .filter(rt => activeTypes.includes(rt.id))
+              .map(rt => (
+                <div key={rt.id} className="bg-white rounded-lg shadow-md flex flex-row items-center p-6 mb-8 h-100">
+                  {/* Image on the left */}
+                  <div className="w-1/2 flex items-center justify-center">
+                    <img src={rt.img} alt={rt.label} className="w-full h-80 object-cover " />
                   </div>
-                  <div className="w-2/3 pl-8 flex flex-col justify-between">
+                  {/* Details on the right */}
+                  <div className="w-1/2 pl-8 flex flex-col justify-between h-full">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">{roomTypeId} Room</h3>
+                      <h2 className="text-2xl font-bold mb-2 text-gray-800">{rt.label} Room</h2>
                       <p className="text-gray-600 mb-2">
-                        Enjoy a comfortable stay with modern amenities.
+                        {rt.label === "Standard" && "A cozy room perfect for solo travelers or couples."}
+                        {rt.label === "Twin" && "Ideal for friends or colleagues, with two separate beds."}
+                        {rt.label === "Deluxe" && "Extra space and upgraded amenities for comfort."}
+                        {rt.label === "Family Suite" && "Spacious suite for families, with multiple beds."}
+                        {rt.label === "Penthouse" && "Luxury suite with panoramic views and premium facilities."}
                       </p>
                       <ul className="text-gray-500 mb-2 list-disc pl-5">
                         <li>Free Wi-Fi</li>
                         <li>Air Conditioning</li>
                         <li>Private Bathroom</li>
                         <li>Complimentary Breakfast</li>
+                        {rt.label === "Deluxe" && <li>Mini Bar</li>}
+                        {rt.label === "Family Suite" && <li>Living Area</li>}
+                        {rt.label === "Penthouse" && <li>Panoramic Views</li>}
+                        {rt.label === "Penthouse" && <li>Premium Facilities</li>}
                       </ul>
                       <p className="text-lg font-semibold text-blue-600 mb-4">
-                        Price: ₱2,500/night
+                        Price: ₱{rt.price}/night
                       </p>
                     </div>
                     <div className="flex justify-end">
                       <button
-                        onClick={() => handleBook(roomTypeId)}
-                        className="border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 hover:bg-blue-600 transition duration-300"
+                        className={`border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 rounded hover:bg-blue-600 transition duration-300 ${!findClicked ? "opacity-50 cursor-not-allowed" : ""}`}
+                        style={{ backgroundColor: "#82A33D", borderColor: "#82A33D" }}
+                        disabled={!findClicked}
+                        onClick={() => findClicked && handleBook(rt.id)}
                       >
                         Book Now
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
+        {/* Filter Container */}
+        {!showCheckout && (
+          <div className="w-full md:w-[30%]">
+            <div className="bg-white border border-gray-300 rounded-md p-8 mb-8">
+              <h2 className="text-2xl font-bold mb-4">Filter Room Types</h2>
+              <div className="flex flex-col gap-2">
+                {roomTypes.map(rt => (
+                  <label key={rt.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={activeTypes.includes(rt.id)}
+                      onChange={() => handleTypeFilterChange(rt.id)}
+                      className="accent-blue-500"
+                    />
+                    <span>{rt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-        {/* Checkout Section (split: fill-up form left, summary right) */}
-        {showCheckout && (
-          <div className="w-full flex flex-col md:flex-row gap-8">
+      {/* Checkout Section (split: fill-up form left, summary right) */}
+      {showCheckout && (
+        <div className="w-full flex justify-center">
+          <div className="w-full md:w-[70%] flex flex-col md:flex-row gap-8">
             {/* Fill-up Form */}
             <div className="w-full md:w-[60%]">
               <button
@@ -254,6 +345,32 @@ export function Booking() {
                   className="border border-gray-300 rounded px-4 py-2"
                   required
                 />
+                {/* Food Package Option */}
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="font-semibold mb-1">Food Package</label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="foodPackage"
+                      value="yes"
+                      checked={guestInfo.foodPackage === "yes"}
+                      onChange={handleGuestInfoChange}
+                      className="accent-blue-500"
+                    />
+                    Yes
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="foodPackage"
+                      value="no"
+                      checked={guestInfo.foodPackage === "no"}
+                      onChange={handleGuestInfoChange}
+                      className="accent-blue-500"
+                    />
+                    No
+                  </label>
+                </div>
               </form>
             </div>
             {/* Checkout Summary */}
@@ -263,61 +380,34 @@ export function Booking() {
                   <h2 className="text-2xl font-bold mb-4">Checkout Summary</h2>
                   {selectedRoom && (
                     <div className="mb-6">
-                      <img src={bookBG} alt="Room" className="w-full h-40 object-cover rounded-md mb-4" />
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">{selectedRoom.roomTypeId} Room</h3>
-                      <p className="text-gray-600 mb-2">Room Number: {selectedRoom.roomNumber}</p>
-                      <p className="text-gray-600 mb-2">Price: ₱2,500/night</p>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">{selectedRoom.label} Room</h3>
+                      <p className="text-gray-600 mb-2">Room Number: {selectedRoom.roomNumber || "N/A"}</p>
+                      <p className="text-gray-600 mb-2">Price: ₱{selectedRoom.price}/night</p>
+                      <p className="text-gray-600 mb-2">Tax & Fees: ₱200</p>
                       <p className="text-gray-600 mb-2">Check-in: {checkIn && checkIn.toLocaleDateString()}</p>
                       <p className="text-gray-600 mb-2">Check-out: {checkOut && checkOut.toLocaleDateString()}</p>
                       <p className="text-gray-600 mb-2">Guests: {guests}</p>
+                      <p className="text-gray-600 mb-2">Food Package: {guestInfo.foodPackage === "yes" ? "Included" : "Not Included"}</p>
+                      <p className="text-lg font-bold text-blue-700 mt-4">
+                        Total: ₱{selectedRoom.price + 200}
+                      </p>
                     </div>
                   )}
-                  {/* Payment Options */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Payment Options</h3>
-                    <div className="flex flex-col gap-2">
-                      {[
-                        { value: "card", label: "Card", img: card },
-                        { value: "gcash", label: "Gcash", img: gcash },
-                        { value: "maya", label: "Maya", img: maya }
-                      ].map(option => (
-                        <div
-                          key={option.value}
-                          className={`flex items-center justify-between p-2 rounded border transition cursor-pointer ${guestInfo.payment === option.value
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-300"
-                            }`}
-                          onClick={() => setGuestInfo({ ...guestInfo, payment: option.value })}
-                        >
-                          <div className="flex items-center gap-2">
-                            <img src={option.img} alt={option.label} className="w-8 h-8" />
-                            <span className="font-medium">{option.label}</span>
-                          </div>
-                          <input
-                            type="radio"
-                            name="payment"
-                            value={option.value}
-                            checked={guestInfo.payment === option.value}
-                            onChange={() => setGuestInfo({ ...guestInfo, payment: option.value })}
-                            className="accent-blue-500 ml-4"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+        
                 </div>
                 <button
                   type="button"
                   className="border-2 border-green-500 bg-green-500 text-white py-2 px-6 w-full rounded hover:bg-green-600 transition duration-300 mt-4"
                   onClick={handleCheckout}
+                                style={{ backgroundColor: "#82A33D", borderColor: "#82A33D" }}
                 >
                   Checkout & Pay
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }

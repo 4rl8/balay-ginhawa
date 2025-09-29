@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import close from '../assets/images/close.svg';
+import BookNowBG from '../assets/images/BookNow.png';
+import { SearchBar } from './booking/SearchBar';
 
 
 export function BookNow() {
     return (
         <>  
-        <Link to="/"><img src={close} className='ml-auto mr-[10%] py-[5%]' /></Link>
+        <div className='min-h-screen bg-cover bg-center' style={{ backgroundImage: `url(${BookNowBG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+  <Link to="/"><img src={close} className='ml-auto mr-[10%] py-[5%]' /></Link>
 
-        <h1 className='text-center text-3xl font-bold pb-10'>BOOK YOUR STAY</h1>
+        <h1 className='text-center text-white text-3xl font-bold pb-10'>BOOK YOUR STAY</h1>
 
         <div className="flex justify-center items-center">
             <div className="bg-white border border-gray-300 rounded-md px-10 py-8 flex flex-col items-center w-[40%]">
@@ -41,11 +44,18 @@ export function BookNow() {
                 </div>
                 <button
                     className="border-2 border-blue-500 bg-blue-500 text-white py-2 px-6 w-full rounded-none"
+                    style={{ backgroundColor: '#82A33D' }}
                 >
-                    Find
+                    CHECK AVAILABILITY
                 </button>
+
+            
             </div>
         </div>
+        
+        </div>
+        
+      
         </>
        
     );

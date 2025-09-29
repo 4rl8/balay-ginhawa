@@ -6,11 +6,12 @@ import wifi from '../assets/images/wifi.svg';
 import roomService from '../assets/images/roomService.svg';
 import dailyService from '../assets/images/dailyService.svg';
 import fitness from '../assets/images/fitness.svg';
+import { Footer } from "@/components/footer";
 
 export function Amenities() {
   return (
     <>
-        <title>balay Ginhawa</title>
+        <title>Amenities</title>
         <div className="relative">
 
           <img
@@ -19,7 +20,7 @@ export function Amenities() {
             className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
           />
           <Header />
-          <div className="p-8 text-white px-20 py-8"  >
+          <div className="p-8 text-white py-8 ml-20"  >
             <h1 className="text-4xl font-bold">Amenities</h1>
             <h2 className="text-2xl">Discover our range of amenities.</h2>
           </div>
@@ -65,7 +66,7 @@ export function Amenities() {
       </div>
 
 
-  
+      <Footer />
     </>
   );
 }

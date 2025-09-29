@@ -1,8 +1,11 @@
 import { Header } from "../components/Header";
 import homeBG from '../assets/images/homeBG.svg';
+// import hellyeah from '../assets/images/homeBG2.svg';
 import homeimg1 from '../assets/images/home-img1.svg';
 import homeimg2 from '../assets/images/home-img2.svg';
 import homeimg3 from '../assets/images/home-img3.svg';
+import { Footer } from "@/components/footer";
+import homeimg4 from '../assets/images/BookNow.png';
 // import { db } from "@/config/firebase-config";
 // import { useState } from "react";
 // import { useEffect } from "react";
@@ -35,7 +38,7 @@ export function HomePage() {
 
   return (
     <>
-      <title>balay Ginhawa</title>
+      <title>Balay Ginhawa</title>
       <div className="relative">
 
         <img
@@ -44,16 +47,16 @@ export function HomePage() {
           className="absolute top-0 left-0 w-full h-90 object-cover -z-10"  
         />
         <Header />
-        <div className="p-8 text-white px-20 py-8"  >
-          <h1 className="text-4xl font-bold">Your Perfect Stay</h1>
-          <h2 className="text-2xl">Starts Here</h2>
+        <div className="p-8 text-white py-8 ml-20 mt-20 h-40">
+          <h1 className="text-5xl font-bold">Your Perfect Stay</h1>
+          <h2 className="text-5xl font-bold" style={{ color: "#82A33D" }}>Starts Here</h2>
              <p>“Let us take care of the details while you focus on enjoying your time away.”</p>
         </div>
       </div>
       
 
 
-      <div className="container mx-auto px-4 py-40 ">
+      <div className="mx-auto px-4 py-20 w-[80%]">
         <div className="flex flex-col md:flex-row gap-6 items-start ">
           <div className="md:w-[60%] w-full bg-white/10 rounded-md p-4">
             <h2 className="text-2xl font-bold mb-4">Welcome to Balay Ginhawa</h2>
@@ -90,6 +93,11 @@ export function HomePage() {
         </div>
       </div>
 
+      <div className="md:w-[40%] w-full">
+        <img src={homeimg4} alt="" />
+      </div>
+
+    <Footer />
     </>
   );
 }

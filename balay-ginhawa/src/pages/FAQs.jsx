@@ -3,6 +3,7 @@ import { Header } from "../components/Header";
 import divider from '../assets/images/divider.svg';
 import FAQsBG from '../assets/images/FAQsBG.svg';
 import dropdown from '../assets/images/dropdown.svg';
+import { Footer } from "@/components/footer";
 
 
 const faqs = [
@@ -33,7 +34,7 @@ export function FAQs() {
 
   return (
     <>
-      <title>balay Ginhawa</title>
+      <title>FAQs</title>
       <div className="relative">
         <img
           src={FAQsBG}
@@ -41,7 +42,7 @@ export function FAQs() {
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />
-        <div className="p-24 text-white px-20 py-8">
+        <div className="ml-10 p-8 text-white px-10 py-8 ml-20">
           <h1 className="text-4xl font-bold">FAQs</h1>
           <h2 className="text-2xl">Frequently Asked Questions</h2>
         </div>
@@ -67,6 +68,7 @@ export function FAQs() {
           </div>
         ))}
       </div>
+          <Footer />  
     </>
   );
 }

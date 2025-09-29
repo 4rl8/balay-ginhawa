@@ -2,36 +2,42 @@ import { useState } from "react";
 import { Header } from "../components/Header";
 import accomBG from '../assets/images/accomBG.svg';
 import divider from '../assets/images/divider.svg';
-import standardImg from '../assets/images/standardImg.svg';
-import twinImg from '../assets/images/twinImg.svg';
-import deluxeImg from '../assets/images/deluxeImg.svg';
-import familySuiteImg from '../assets/images/familySuiteImg.svg';
-import penthouseImg from '../assets/images/penthouseImg.svg';
+// import standardImg from '../assets/images/standardImg.svg';
+// import twinImg from '../assets/images/twinImg.svg';
+// import deluxeImg from '../assets/images/deluxeImg.svg';
+// import familySuiteImg from '../assets/images/familySuiteImg.svg';
+// import penthouseImg from '../assets/images/penthouseImg.svg';
+import standard from '../assets/images/standard2.png';
+import twin from '../assets/images/twin2.png';
+import deluxe from '../assets/images/deluxe2.png';
+import family from '../assets/images/family2.png';
+import penthouse from '../assets/images/penthouse2.png';
+import { Footer } from "@/components/footer";
 
 const rooms = [
   {
     title: "Standard Room",
-    img: standardImg,
+    img: standard,
     desc: "A cozy room perfect for solo travelers or couples, featuring essential amenities for a comfortable stay."
   },
   {
     title: "Twin Room",
-    img: twinImg,
+    img: twin,
     desc: "Designed for friends or colleagues, featuring two separate single beds with all standard conveniences."
   },
   {
     title: "Deluxe Room",
-    img: deluxeImg,
+    img: deluxe,
     desc: "Enjoy extra space and upgraded amenities in our deluxe room, designed for comfort and convenience."
   },
   {
     title: "Family Suite",
-    img: familySuiteImg,
+    img: family,
     desc: "Spacious suite for families, with multiple beds and a living area to ensure everyone feels at home."
   },
   {
     title: "Penthouse",
-    img: penthouseImg,
+    img: penthouse,
     desc: "Experience luxury in our penthouse suite, featuring panoramic views and premium facilities."
   }
 ];
@@ -49,7 +55,7 @@ export function Accommodations() {
           className="absolute top-0 left-0 w-full h-60 object-cover -z-10"
         />
         <Header />
-        <div className="ml-10 p-8 text-white px-10 py-8">
+        <div className="ml-10 p-8 text-white px-10 py-8 ml-20">
           <h1 className="text-4xl font-bold">Accommodations</h1>
           <p className="text-2xl">Explore our comfortable accommodations.</p>
         </div>
@@ -93,7 +99,7 @@ export function Accommodations() {
           <img
             src={modalImg}
             alt="Room Preview"
-            className="w-[180vw] max-w-none h-auto max-h-[90vh] rounded-lg transition-all duration-300 scale-100 animate-fade-in"
+            className="w-[180vw] max-w-none h-auto max-h-[90vh] rounded-lg transition-all duration-300 scale-67 animate-fade-in"
             style={{ zIndex: 51, position: "relative" }}
           />
           <button
@@ -117,6 +123,7 @@ export function Accommodations() {
           </style>
         </div>
       )}
+      <Footer />
     </>
   );
 }
