@@ -6,6 +6,7 @@ import homeimg2 from '../assets/images/home-img2.svg';
 import homeimg3 from '../assets/images/home-img3.svg';
 import { Footer } from "@/components/footer";
 import homeimg4 from '../assets/images/BookNow.png';
+import ChatBot from "@/components/ChatBot/ChatBot";
 // import { db } from "@/config/firebase-config";
 // import { useState } from "react";
 // import { useEffect } from "react";
@@ -96,6 +97,8 @@ export function HomePage() {
       <div className="md:w-[40%] w-full">
         <img src={homeimg4} alt="" />
       </div>
+
+      <ChatBot />
 
     <Footer />
     </>
