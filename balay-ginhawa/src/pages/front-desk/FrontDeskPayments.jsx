@@ -28,7 +28,7 @@ function PaymentActions({ guest, room, bookingId }) {
         roomNo: room,
         paymentType: "Additional Charge",
         description: chargeDesc,
-        amount: chargeAmount,
+        amount: Number(chargeAmount) || 0,
         date: serverTimestamp(),
       });
 

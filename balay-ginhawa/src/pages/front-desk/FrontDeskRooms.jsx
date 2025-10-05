@@ -4,7 +4,7 @@ import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
 import Dropdown from "@/components/Dropdown";
 import Table from "@/components/Table";
 import { db } from "../../config/firebase-config";
-import { collection, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, updateDoc, doc, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 
 export function FrontDeskRooms() {
   // Ito yung mga header ng table, fixed values na ipapakita sa taas ng bawat column
@@ -20,54 +20,80 @@ export function FrontDeskRooms() {
 
   // State para sa rows ng table, naglalaman ng data ng bawat room
   const [rows, setRows] = useState([]);
-
   useEffect(() => {
-    // Gumagawa ng listener sa "roomTypes" collection para makuha details ng bawat room type
+    // We'll subscribe to roomTypes, rooms, and bookings and rebuild rows whenever any change.
+    let latestRoomTypes = {};
+    let latestRoomsDocs = [];
+    let latestBookingsMap = {}; // roomId (string) -> latest checkOut (Date or Timestamp)
+
     const unsubRoomTypes = onSnapshot(collection(db, "roomTypes"), (snap) => {
-      const roomTypesMap = {};
-      snap.forEach((docSnap) => {
-        roomTypesMap[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
-      });
-
-      // Gumagawa ng listener sa "rooms" collection para makuha realtime updates ng lahat ng rooms
-      const unsubRooms = onSnapshot(collection(db, "rooms"), (roomSnap) => {
-        const rooms = roomSnap.docs.map((docSnap) => {
-          const data = docSnap.data();
-          const typeData = roomTypesMap[data.roomTypeId] || {};
-
-          // Kung meron nang naka set na price sa room, iyon ang gagamitin, kung wala gagamitin ang basePrice ng room type
-          const price =
-            data.pricePerNight && data.pricePerNight > 0
-              ? data.pricePerNight
-              : typeData.basePrice || 0;
-
-          // Kung may checkOut date, i-format ito as readable date, kung wala lagay lang ng dash
-          const formattedDate = data.checkOut?.toDate
-            ? data.checkOut.toDate().toLocaleDateString()
-            : "-";
-
-          // Nagbabalik ng array ng values para sa bawat row ng table
-          return [
-            data.roomNumber || "N/A",
-            typeData.name || data.roomTypeId || "N/A",
-            data.status || "inactive",
-            data.availability || "vacant",
-            `₱ ${price.toLocaleString()}`,
-            formattedDate,
-            docSnap.id, // Firestore doc ID, ginagamit para ma update ang tamang room
-          ];
-        });
-
-        // Sine-set ang bagong rows para lumabas sa table
-        setRows(rooms);
-      });
-
-      // Cleanup ng listener sa rooms
-      return () => unsubRooms();
+      const map = {};
+      snap.forEach((d) => (map[d.id] = { id: d.id, ...d.data() }));
+      latestRoomTypes = map;
+      rebuildRows();
     });
 
-    // Cleanup ng listener sa roomTypes
-    return () => unsubRoomTypes();
+    const unsubRooms = onSnapshot(collection(db, "rooms"), (snap) => {
+      latestRoomsDocs = snap.docs;
+      rebuildRows();
+    });
+
+    const unsubBookings = onSnapshot(collection(db, "bookings"), (snap) => {
+      const map = {};
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        const rid = data.roomId;
+        const co = data.checkOut;
+        // Normalize to Date for easy comparison
+        let date = null;
+        if (co?.toDate) date = co.toDate();
+        else if (co instanceof Date) date = co;
+
+        if (!rid || !date) return;
+
+        // Keep the latest (max) checkOut per roomId
+        if (!map[rid] || map[rid] < date) map[rid] = date;
+      });
+      latestBookingsMap = map;
+      rebuildRows();
+    });
+
+    function rebuildRows() {
+      if (!latestRoomsDocs) return;
+      const rowsBuilt = latestRoomsDocs.map((docSnap) => {
+        const data = docSnap.data();
+        const typeData = latestRoomTypes[data.roomTypeId] || {};
+
+        const price = data.pricePerNight && data.pricePerNight > 0 ? data.pricePerNight : typeData.basePrice || 0;
+
+        // Try bookings map by doc id first, then by roomNumber
+        let formattedDate = "-";
+        const byDoc = latestBookingsMap[docSnap.id];
+        const byNumber = data.roomNumber ? latestBookingsMap[data.roomNumber] : null;
+        const useDate = byDoc || byNumber || null;
+        if (useDate) {
+          formattedDate = useDate.toLocaleDateString();
+        }
+
+        return [
+          data.roomNumber || "N/A",
+          typeData.name || data.roomTypeId || "N/A",
+          data.status || "inactive",
+          data.availability || "vacant",
+          `₱ ${price.toLocaleString()}`,
+          formattedDate,
+          docSnap.id,
+        ];
+      });
+
+      setRows(rowsBuilt);
+    }
+
+    return () => {
+      unsubRoomTypes();
+      unsubRooms();
+      unsubBookings();
+    };
   }, []);
 
   // Function na ginagamit kapag may pinili sa dropdown para baguhin ang availability ng room
