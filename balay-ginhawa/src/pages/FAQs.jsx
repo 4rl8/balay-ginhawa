@@ -4,6 +4,7 @@ import divider from '../assets/images/divider.svg';
 import FAQsBG from '../assets/images/FAQsBG.svg';
 import dropdown from '../assets/images/dropdown.svg';
 import { Footer } from "@/components/footer";
+import ChatBot from "@/components/ChatBot/ChatBot";
 
 
 const faqs = [
@@ -68,6 +69,8 @@ export function FAQs() {
           </div>
         ))}
       </div>
+            <ChatBot />
+
           <Footer />  
     </>
   );

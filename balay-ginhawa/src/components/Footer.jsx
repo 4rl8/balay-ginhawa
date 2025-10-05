@@ -11,9 +11,12 @@ export function Footer() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:justify-between gap-10">
        
                 <div className="flex-1 min-w-[220px] mb-8 md:mb-0">
-                    <img src={logo} alt="Logo" className="w-32 mb-4" />
+                   <div className="flex items-center mb-4 gap-5">
+                     <img src={logo} alt="Logo" className="w-32 mb-4" />
+                    <h2 className="text-2xl font-bold mb-4 text-white">Balay Ginhawa</h2>
+                   </div>
                     <p className="mb-6 text-gray-400">
-                        Discover the world's most extraordinary places to stay, from boutique hotels to luxury villas and private islands.
+Discover "Balay Ginhawa", an extraordinary boutique retreat where tranquility, culture, and comfort seamlessly blend. More than just a place to stay.
                     </p>
                     <div className="flex gap-4">
                         <a href="#" aria-label="Instagram">
@@ -37,7 +40,6 @@ export function Footer() {
                         <ul className="space-y-2 text-gray-400">
                             <li><a href="#" className="hover:text-white">About</a></li>
                             <li><a href="#" className="hover:text-white">Careers</a></li>
-                            <li><a href="#" className="hover:text-white">Press</a></li>
                             <li><a href="#" className="hover:text-white">Blog</a></li>
                             <li><a href="#" className="hover:text-white">Partners</a></li>
                         </ul>
@@ -47,7 +49,6 @@ export function Footer() {
                         <ul className="space-y-2 text-gray-400">
                             <li><a href="#" className="hover:text-white">Help Center</a></li>
                             <li><a href="#" className="hover:text-white">Safety Information</a></li>
-                            <li><a href="#" className="hover:text-white">Cancellation Options</a></li>
                             <li><a href="#" className="hover:text-white">Contact Us</a></li>
                             <li><a href="#" className="hover:text-white">Accessibility</a></li>
                         </ul>
@@ -70,7 +71,7 @@ export function Footer() {
                 </div>
             </div>
             <div className="mt-10 text-center text-gray-500 text-sm">
-                &copy; {new Date().getFullYear()} Your Company. All rights reserved.
+                &copy; {new Date().getFullYear()} Balay Ginhawa. All rights reserved.
             </div>
         </footer>
     );
