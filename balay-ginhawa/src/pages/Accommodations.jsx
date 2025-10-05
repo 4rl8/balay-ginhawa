@@ -13,6 +13,8 @@ import deluxe from '../assets/images/deluxe2.png';
 import family from '../assets/images/family2.png';
 import penthouse from '../assets/images/penthouse2.png';
 import { Footer } from "@/components/footer";
+import ChatBot from "@/components/ChatBot/ChatBot";
+
 
 const rooms = [
   {
@@ -123,6 +125,7 @@ export function Accommodations() {
           </style>
         </div>
       )}
+      <ChatBot />
       <Footer />
     </>
   );

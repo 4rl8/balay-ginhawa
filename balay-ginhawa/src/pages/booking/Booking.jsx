@@ -14,6 +14,8 @@ import { RoomList } from "./RoomList";
 import { RoomFilter } from "./RoomFilter";
 import { Checkout } from "./Checkout";
 import { Footer } from "@/components/footer";
+import ChatBot from "@/components/ChatBot/ChatBot";
+
 
 
 const roomTypes = [
@@ -44,9 +46,9 @@ export function Booking() {
   const [findClicked, setFindClicked] = useState(false);
   const [priceSort, setPriceSort] = useState(""); // "low" or "high"
   const [occupancyFilter, setOccupancyFilter] = useState(""); // "solo", "couple", "family", "group"
-  
+
   const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 : 0;
-const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
+  const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
 
 
   let filteredRoomTypes = roomTypes.filter(rt => activeTypes.includes(rt.id));
@@ -62,7 +64,7 @@ const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
 
   const { availableByType, findAvailableRooms } = useBookingLogic();
 
-   function handleFind() {
+  function handleFind() {
     if (!checkIn || !checkOut) return;
     setFindClicked(true);
 
@@ -90,28 +92,28 @@ const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-          data: {
-            attributes: {
-                send_email_receipt: true,
-                line_items: [{
-                    name: selectedRoom.label + " Room",
-                    quantity: 1,
-                    amount: totalPrice * 100, // Ensure totalPrice is a valid number
-                    currency: "PHP"
-                }],
-                payment_method_types: ["gcash", "card", "paymaya"],
-                success_url: "http://localhost:5173/success",
-               cancel_url: "http://localhost:5173/cancel",
-                metadata: {
-                    booking_id: selectedRoom.id,
-                    guest_Fname: guestInfo.Fname,
-                    guest_LName: guestInfo.LName,
-                    email: guestInfo.email,
-                    phone: guestInfo.phone
-                }
-                
+        data: {
+          attributes: {
+            send_email_receipt: true,
+            line_items: [{
+              name: selectedRoom.label + " Room",
+              quantity: 1,
+              amount: totalPrice * 100, // Ensure totalPrice is a valid number
+              currency: "PHP"
+            }],
+            payment_method_types: ["gcash", "card", "paymaya"],
+            success_url: "http://localhost:5173/success",
+            cancel_url: "http://localhost:5173/cancel",
+            metadata: {
+              booking_id: selectedRoom.id,
+              guest_Fname: guestInfo.Fname,
+              guest_LName: guestInfo.LName,
+              email: guestInfo.email,
+              phone: guestInfo.phone
+            }
+
           },
-     
+
         },
       }),
     });
@@ -184,12 +186,13 @@ const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
           checkOut={checkOut}
           guests={guests}
           onBack={() => setShowCheckout(false)}
-          onCheckout={handleCheckout} 
-          totalPrice={totalPrice} 
+          onCheckout={handleCheckout}
+          totalPrice={totalPrice}
           foodPackageFee={foodPackageFee}
-          />
+        />
       )}
 
+      <ChatBot />
       <Footer />
     </>
   );

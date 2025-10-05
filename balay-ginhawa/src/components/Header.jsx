@@ -17,9 +17,10 @@ export function Header() {
 
   return (
     <header>
-      <nav className="flex items-center p-4 text-white h-25 ml-10 mr-10">
+      <nav className="flex items-center p-4 text-white h-25 ml-10 mr-20">
         <div className="flex items-center h-full">
           <img className="h-full ml-15" src={logo} alt="balay Ginhawa Logo" />
+          <h1 className="text-xl font-bold text-white pl-3 ">Balay Ginhawa</h1>
         </div>
         <div className="flex-1 flex justify-center items-center h-full">
           <ul className="flex space-x-3 h-full items-center">
