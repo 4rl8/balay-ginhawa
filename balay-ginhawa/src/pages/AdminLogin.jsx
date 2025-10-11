@@ -28,7 +28,6 @@ export default function AdminLogin() {
   const [signupConfirm, setSignupConfirm] = useState("");
   const [signupError, setSignupError] = useState("");
 
-  // ✅ Auto-redirect if already logged in
   useEffect(() => {
     if (admin) {
       navigate("/frontdesk/bookings", { replace: true });
@@ -37,166 +36,79 @@ export default function AdminLogin() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
     try {
-      // Hash entered password to compare with stored hashed password
-      const hashPassword = async (pw) => {
-        if (!pw) return "";
-        const enc = new TextEncoder();
-        const data = enc.encode(pw);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-      };
-
-      const hashedLoginPw = await hashPassword(password);
-
       const q = query(
         collection(db, "admins"),
-        where("adminId", "==", adminId),
-        where("password", "==", hashedLoginPw)
+        where("adminId", "==", adminId.trim()),
+        where("password", "==", password.trim())
       );
 
       const snap = await getDocs(q);
-      if (!snap.empty) {
-        const doc = snap.docs[0];
-        const adminData = { id: doc.id, ...doc.data() };
-
-        // Save admin to context
-        login(adminData);
-
-        // Update timeIn
-        await updateDoc(doc.ref, { timeIn: serverTimestamp(), timeOut: null });
-
-        navigate("/frontdesk", { replace: true }); // redirect to dashboard
-      } else {
-        // Fallback for existing accounts that still have plaintext passwords in DB.
-        // Try querying with the plaintext password; if found, re-hash and update the doc.
-        const qPlain = query(
-          collection(db, "admins"),
-          where("adminId", "==", adminId),
-          where("password", "==", password)
-        );
-
-        const snapPlain = await getDocs(qPlain);
-        if (!snapPlain.empty) {
-          const docPlain = snapPlain.docs[0];
-
-          // Re-hash the plaintext password and update the stored password to the hash
-          const hashPassword = async (pw) => {
-            if (!pw) return "";
-            const enc = new TextEncoder();
-            const data = enc.encode(pw);
-            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-          };
-
-          const hashedLoginPw = await hashPassword(password);
-          try {
-            await updateDoc(docPlain.ref, { password: hashedLoginPw });
-          } catch (updErr) {
-            console.error("Failed to migrate plaintext password:", updErr);
-          }
-
-          const adminData = { id: docPlain.id, ...docPlain.data(), password: hashedLoginPw };
-
-          // Save admin to context and update timeIn
-          login(adminData);
-          await updateDoc(docPlain.ref, { timeIn: serverTimestamp(), timeOut: null });
-          navigate("/frontdesk", { replace: true });
-          return;
-        }
-
-        setError("Invalid credentials");
+      if (snap.empty) {
+        setError("Invalid Admin ID or password");
+        return;
       }
+
+      const doc = snap.docs[0];
+      const adminData = { id: doc.id, ...doc.data() };
+
+      // Record timeIn
+      await updateDoc(doc.ref, { timeIn: serverTimestamp(), timeOut: null });
+
+      login(adminData);
+      navigate("/frontdesk", { replace: true });
     } catch (err) {
-      console.error(err);
-      setError("Login failed");
+      console.error("Login error:", err);
+      setError("Login failed. Please check console for details.");
     }
   };
 
-  // Create a new admin account in Firestore and immediately log them in
   const handleSignup = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     setSignupError("");
 
-    if (!signupId.trim() || !signupPassword.trim() || !signupName.trim()) {
+    if (!signupId.trim() || !signupName.trim() || !signupPassword.trim()) {
       setSignupError("Please fill all fields");
       return;
     }
-
     if (signupPassword !== signupConfirm) {
       setSignupError("Passwords do not match");
       return;
     }
 
     try {
-      // Hash password client-side before storing
-      const hashPassword = async (pw) => {
-        if (!pw) return "";
-        const enc = new TextEncoder();
-        const data = enc.encode(pw);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-      };
-
-      const hashed = await hashPassword(signupPassword);
-      // Check for existing adminId
-      const q = query(
-        collection(db, "admins"),
-        where("adminId", "==", signupId.trim())
-      );
+      const q = query(collection(db, "admins"), where("adminId", "==", signupId.trim()));
       const snap = await getDocs(q);
       if (!snap.empty) {
         setSignupError("Admin ID already exists");
         return;
       }
 
-      // Create new admin doc (store hashed password and name)
-      console.log("Creating admin with:", { adminId: signupId.trim(), name: signupName.trim() });
       const docRef = await addDoc(collection(db, "admins"), {
         adminId: signupId.trim(),
         name: signupName.trim(),
-        password: hashed,
+        password: signupPassword.trim(),
         createdAt: serverTimestamp(),
         timeIn: serverTimestamp(),
         timeOut: null,
       });
 
-      console.log("Created admin doc id:", docRef.id);
-      const adminData = {
-        id: docRef.id,
-        adminId: signupId.trim(),
-        name: signupName.trim(),
-      };
-
-      // Save to context and redirect to front desk
+      const adminData = { id: docRef.id, adminId: signupId.trim(), name: signupName.trim() };
       login(adminData);
 
-      // Close popup and reset signup state
       setShowSignup(false);
-      setSignupId("");
-      setSignupName("");
-      setSignupPassword("");
-      setSignupConfirm("");
-
-      // Show success message briefly then redirect
-      setSignupError(`Account created (id: ${docRef.id})`);
-      setTimeout(() => navigate("/frontdesk", { replace: true }), 700);
+      navigate("/frontdesk", { replace: true });
     } catch (err) {
       console.error("Signup failed:", err);
-      setSignupError(`Signup failed: ${err?.message || err}`);
+      setSignupError(`Signup failed: ${err.message}`);
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleLogin}
-        className="bg-white p-8 shadow-md rounded-md w-96"
-      >
+      <form onSubmit={handleLogin} className="bg-white p-8 shadow-md rounded-md w-96">
         <h2 className="text-2xl font-bold mb-4">Admin Login</h2>
         {error && <p className="text-red-500 mb-2">{error}</p>}
 
@@ -207,7 +119,6 @@ export default function AdminLogin() {
           onChange={(e) => setAdminId(e.target.value)}
           className="border w-full p-2 mb-3"
         />
-
         <input
           type="password"
           placeholder="Password"
@@ -216,10 +127,7 @@ export default function AdminLogin() {
           className="border w-full p-2 mb-3"
         />
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-        >
+        <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
           Login
         </button>
 
@@ -233,11 +141,11 @@ export default function AdminLogin() {
           </button>
         </div>
 
-        {/* Signup popup */}
         <Popup isOpen={showSignup} onClose={() => setShowSignup(false)}>
           <h2 className="text-2xl font-bold mb-4">Create Admin Account</h2>
           {signupError && <p className="text-red-500 mb-2">{signupError}</p>}
-          <div className="space-y-2" role="form" aria-label="Create Admin Account">
+
+          <div className="space-y-2">
             <input
               type="text"
               placeholder="Admin ID"
@@ -275,7 +183,11 @@ export default function AdminLogin() {
               >
                 Cancel
               </button>
-              <button type="button" onClick={handleSignup} className="px-4 py-2 bg-green-600 text-white rounded">
+              <button
+                type="button"
+                onClick={handleSignup}
+                className="px-4 py-2 bg-green-600 text-white rounded"
+              >
                 Create
               </button>
             </div>

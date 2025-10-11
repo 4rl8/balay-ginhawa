@@ -12,11 +12,14 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export function FrontDeskBookings() {
   // Table headers
   const headers = ["Guest Name", "Check-in", "Check-out", "Status", "Actions"];
   const [rows, setRows] = useState([]);
+  const [bookingsRaw, setBookingsRaw] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDocId, setEditDocId] = useState(null);
@@ -38,38 +41,172 @@ export function FrontDeskBookings() {
   // Real-time listener para sa bookings collection
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "bookings"), (querySnap) => {
-      const bookings = querySnap.docs.map((docSnap) => {
-        const data = docSnap.data();
-        const checkIn = data.checkIn?.toDate
-          ? data.checkIn.toDate().toLocaleDateString()
-          : "N/A";
-        const checkOut = data.checkOut?.toDate
-          ? data.checkOut.toDate().toLocaleDateString()
-          : "N/A";
-
-        // Return row as array; append Edit button as last cell
-        return [
-          data.guestInfo?.name || "Unknown",
-          checkIn,
-          checkOut,
-          data.status || "Pending",
-          // Actions cell: a React element (Edit button) that opens edit modal
-          (
-            <button
-              onClick={() => openEditModal(docSnap.id, data)}
-              className="px-4 py-2 bg-gray-200 rounded-md text-s hover:bg-gray-300 inline-block"
-            >
-              Edit
-            </button>
-          ),
-        ];
-      });
-      setRows(bookings);
+      const all = querySnap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        data: docSnap.data(),
+      }));
+      setBookingsRaw(all);
     });
 
     // Cleanup function para hindi mag memory leak
     return () => unsub();
   }, []);
+
+  // Date filter state
+  const [range, setRange] = useState("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const getRangeBounds = (r) => {
+    const now = new Date();
+    let from = null;
+    let to = null;
+    switch (r) {
+      case "week":
+        from = new Date();
+        from.setDate(now.getDate() - 7);
+        to = now;
+        break;
+      case "month":
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        to = now;
+        break;
+      case "6months":
+        from = new Date();
+        from.setMonth(now.getMonth() - 6);
+        to = now;
+        break;
+      case "year":
+        from = new Date();
+        from.setFullYear(now.getFullYear() - 1);
+        to = now;
+        break;
+      case "custom":
+        from = customFrom ? new Date(customFrom) : null;
+        to = customTo ? new Date(customTo) : null;
+        break;
+      default:
+        from = null;
+        to = null;
+    }
+    return { from, to };
+  };
+
+  const filterBookingByRange = (booking) => {
+    const d =
+      booking.data.checkIn?.toDate?.() ||
+      (booking.data.checkIn instanceof Date ? booking.data.checkIn : null) ||
+      booking.data.checkOut?.toDate?.() ||
+      (booking.data.checkOut instanceof Date ? booking.data.checkOut : null);
+    if (!d) return range === "all" || range === "";
+    const { from, to } = getRangeBounds(range);
+    if (!from && !to) return true; // all time
+    if (from && to) return d >= from && d <= to;
+    if (from && !to) return d >= from;
+    if (!from && to) return d <= to;
+    return true;
+  };
+
+  // derive rows from bookingsRaw and current filter
+  useEffect(() => {
+    const rowsBuilt = bookingsRaw.map((b) => {
+      const data = b.data;
+      const checkIn =
+        data.checkIn?.toDate?.().toLocaleDateString() ||
+        (data.checkIn instanceof Date
+          ? data.checkIn.toLocaleDateString()
+          : "N/A");
+      const checkOut =
+        data.checkOut?.toDate?.().toLocaleDateString() ||
+        (data.checkOut instanceof Date
+          ? data.checkOut.toLocaleDateString()
+          : "N/A");
+      return {
+        id: b.id,
+        display: [
+          data.guestInfo?.name || "Unknown",
+          checkIn,
+          checkOut,
+          data.status || "Pending",
+        ],
+        raw: data,
+      };
+    });
+
+    const filtered = rowsBuilt.filter((r, i) =>
+      filterBookingByRange(bookingsRaw[i])
+    );
+
+    const tableRows = filtered.map((r) => [
+      ...r.display,
+      <button
+        key={`edit-${r.id}`}
+        onClick={() => openEditModal(r.id, r.raw)}
+        className="px-2 py-1 bg-gray-200 rounded-md text-xs hover:bg-gray-300 inline-block"
+      >
+        Edit
+      </button>,
+    ]);
+    setRows(tableRows);
+  }, [bookingsRaw, range, customFrom, customTo]);
+
+// Download bookings as Excel using SheetJS
+const downloadBookingsExcel = () => {
+  const filtered = bookingsRaw.filter(filterBookingByRange);
+  if (!filtered.length) {
+    alert("No records to download for the selected range.");
+    return;
+  }
+
+  const data = filtered.map((b) => {
+    const d = b.data;
+    const checkIn =
+      d.checkIn?.toDate?.().toISOString() ||
+      (d.checkIn instanceof Date ? d.checkIn.toISOString() : "");
+    const checkOut =
+      d.checkOut?.toDate?.().toISOString() ||
+      (d.checkOut instanceof Date ? d.checkOut.toISOString() : "");
+    const createdAt =
+      d.createdAt?.toDate?.().toISOString() ||
+      (d.createdAt instanceof Date ? d.createdAt.toISOString() : "");
+    return {
+      ID: b.id,
+      GuestName: d.guestInfo?.name || "",
+      Email: d.guestInfo?.email || "",
+      Phone: d.guestInfo?.phone || "",
+      Guests: d.guests || "",
+      RoomID: d.roomId || "",
+      Payment: d.payment || "",
+      CheckIn: checkIn,
+      CheckOut: checkOut,
+      Status: d.status || "",
+      CreatedAt: createdAt,
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // === Auto-adjust column widths ===
+  const objectMaxLength = [];
+  const keys = Object.keys(data[0]);
+  keys.forEach((key, i) => {
+    const columnLengths = data.map((row) =>
+      row[key] ? row[key].toString().length : 0
+    );
+    const headerLength = key.length;
+    const maxLength = Math.max(headerLength, ...columnLengths);
+    objectMaxLength[i] = maxLength;
+  });
+  worksheet["!cols"] = objectMaxLength.map((len) => ({ wch: len + 2 }));
+
+  // Create workbook and export
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  saveAs(blob, `bookings_${range || "all"}.xlsx`);
+};
+
 
   // Update form state kapag may pagbabago sa inputs
   const handleChange = (e) => {
@@ -87,9 +224,8 @@ export function FrontDeskBookings() {
         const val = obj[key];
         const path = prefix ? `${prefix}.${key}` : key;
 
-        // Firestore Timestamp
         if (val && typeof val.toDate === "function") {
-          const iso = val.toDate().toISOString().slice(0, 10); // yyyy-mm-dd
+          const iso = val.toDate().toISOString().slice(0, 10);
           flat[path] = iso;
           types[path] = "timestamp";
         } else if (val instanceof Date) {
@@ -126,7 +262,6 @@ export function FrontDeskBookings() {
           const type = originalTypes[path];
           let val = flatObj[path];
           if (type === "timestamp" || type === "date") {
-            // convert back to Date object; updateDoc accepts Date
             val = val ? new Date(val) : null;
           } else if (type === "number") {
             val = val === "" || val === null ? null : Number(val);
@@ -175,7 +310,6 @@ export function FrontDeskBookings() {
         status: "Pending",
       });
 
-      // Reset fields at close modal pagkatapos mag save
       setShowModal(false);
       setForm({
         name: "",
@@ -195,30 +329,66 @@ export function FrontDeskBookings() {
   return (
     <>
       <title>balay Ginhawa</title>
-      {/* Header para sa front desk pages */}
       <FrontDeskHeader />
 
       <div className="flex">
-        {/* Side panel with active Bookings */}
         <FrontDeskSidePanel active="Bookings" />
 
         <main className="flex-1 p-6 bg-[#FDF4EC] min-h-screen">
-          {/* Button pang open ng Add Booking modal */}
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-5 py-2 bg-gray-300 text-black rounded-sm"
-          >
-            Add Booking
-          </button>
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-5 py-2 bg-gray-300 text-black rounded-sm"
+            >
+              Add Booking
+            </button>
 
-          {/* Table component na may dynamic rows */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm">Range:</label>
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                <option value="all">All time</option>
+                <option value="week">Last 7 days</option>
+                <option value="month">This month</option>
+                <option value="6months">Last 6 months</option>
+                <option value="year">Last year</option>
+                <option value="custom">Custom</option>
+              </select>
+              {range === "custom" && (
+                <>
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="border rounded px-2 py-1 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="border rounded px-2 py-1 text-sm"
+                  />
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={downloadBookingsExcel}
+              className="ml-auto px-3 py-1 bg-green-600 text-white rounded-sm text-sm hover:bg-green-700"
+            >
+              Download Excel
+            </button>
+          </div>
+
           <Table headers={headers} rows={rows} />
 
-          {/* Popup modal para sa Add Booking form */}
+          {/* Popup for Add Booking */}
           <Popup isOpen={showModal} onClose={() => setShowModal(false)}>
             <h2 className="text-lg font-bold mb-4">Add Booking</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              {/* Input fields para sa guest details */}
               <input
                 type="text"
                 name="name"
@@ -288,7 +458,6 @@ export function FrontDeskBookings() {
                 required
               />
 
-              {/* Action buttons para sa form */}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -307,17 +476,22 @@ export function FrontDeskBookings() {
             </form>
           </Popup>
 
-          {/* Edit modal - renders dynamic fields based on editData */}
+          {/* Edit modal */}
           <Popup isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
             <h2 className="text-lg font-bold mb-4">Edit Booking</h2>
             <form onSubmit={handleEditSubmit} className="space-y-3">
-              {/* Render inputs for each flattened key */}
               {Object.keys(editData).length === 0 && (
                 <div className="text-gray-500">No editable fields</div>
               )}
 
               {Object.entries(editData).map(([key, value]) => {
-                const inputType = originalTypes[key] === "timestamp" || originalTypes[key] === "date" ? "date" : typeof value === "number" ? "number" : "text";
+                const inputType =
+                  originalTypes[key] === "timestamp" ||
+                  originalTypes[key] === "date"
+                    ? "date"
+                    : typeof value === "number"
+                    ? "number"
+                    : "text";
                 return (
                   <div key={key} className="space-y-1">
                     <label className="text-sm text-gray-600">{key}</label>
@@ -332,8 +506,19 @@ export function FrontDeskBookings() {
               })}
 
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Save
+                </button>
               </div>
             </form>
           </Popup>
