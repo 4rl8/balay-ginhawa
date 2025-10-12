@@ -43,9 +43,7 @@ function ChatBot() {
     };
 
     useEffect(() => {
-        if (chatBodyRef.current) {
-            chatBodyRef.current.scrollTo({ top: chatBodyRef.current.scrollHeight, behavior: "smooth" });
-        }
+        chatBodyRef.current.scrollTo({ top: chatBodyRef.current.scrollHeight, behavior: "smooth" });
     }, [chatHistory]);
 
     return (
@@ -68,7 +66,7 @@ function ChatBot() {
 
                 {/* {Chatbot Body} */}
 
-                <div className="chat-body">
+                <div ref={chatBodyRef} className="chat-body">
                     <div className="message bot-message">
                         <ChatBotIcon />
                         <p className="message-text">Hello! How can I assist you today?</p>
