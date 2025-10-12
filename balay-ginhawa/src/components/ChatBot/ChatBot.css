@@ -153,12 +153,13 @@ body {
 
 
 .chat-body .bot-message svg{
-   height: 35px;
+  height: 35px;
   width: 35px;
   padding: 6px;
   fill: #fff;
   flex-shrink: 0; 
   margin-bottom:  30px;
+  margin-top: auto;
   background-color: #82A33D;
   border-radius: 50%;
 }
