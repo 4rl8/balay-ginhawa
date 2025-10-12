@@ -4,18 +4,12 @@ export function RoomCard({ roomType, findClicked, onBook }) {
   return (
     <div className="bg-white rounded-lg shadow-md flex flex-row items-center p-6 mb-8">
       <div className="w-1/2 flex items-center justify-center">
-        <img src={img} alt={label} className="w-full h-67 object-cover" />
+        <img src={img} alt={label} className="w-full h-80 object-cover" />
       </div>
-      <div className="w-1/2 pl-8 flex flex-col justify-between">
+      
+      <div className="w-1/2 pl-8 flex flex-col justify-between ">
         <div>
-          <h2 className="text-2xl font-bold mb-2 text-gray-800">{label} Room</h2>
-          <p className="text-gray-600 mb-2">
-            {label === "Standard" && "A cozy room perfect for solo travelers or couples."}
-            {label === "Twin" && "Ideal for friends or colleagues, with two separate beds."}
-            {label === "Deluxe" && "Extra space and upgraded amenities for comfort."}
-            {label === "Family Suite" && "Spacious suite for families, with multiple beds."}
-            {label === "Penthouse" && "Luxury suite with panoramic views and premium facilities."}
-          </p>
+          <h2 className="text-2xl font-bold mb-2 text-gray-800">{label}</h2>
           <ul className="text-gray-500 mb-2 list-disc pl-5">
             <li>Free Wi-Fi</li><li>Air Conditioning</li><li>Private Bathroom</li>
           </ul>

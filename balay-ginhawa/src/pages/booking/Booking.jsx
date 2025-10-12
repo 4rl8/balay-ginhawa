@@ -15,15 +15,17 @@ import { RoomFilter } from "./RoomFilter";
 import { Checkout } from "./Checkout";
 import { Footer } from "@/components/footer";
 import ChatBot from "@/components/ChatBot/ChatBot";
+import { db } from "../../config/firebase-config";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 
 
 const roomTypes = [
-  { id: "Standard", label: "Standard", img: standard, price: 3000 },
-  { id: "Twin", label: "Twin", img: twin, price: 3000 },
-  { id: "Deluxe", label: "Deluxe", img: deluxe, price: 3500 },
-  { id: "Family Suite", label: "Family Suite", img: familySuite, price: 6000 },
-  { id: "PenthouseSuite", label: "Penthouse", img: pentHouse, price: 12000 },
+  { id: "Standard", label: "Standard Room", img: standard, price: 3000 },
+  { id: "Twin", label: "Twin Room", img: twin, price: 3000 },
+  { id: "Deluxe", label: "Deluxe Room", img: deluxe, price: 3500 },
+  { id: "FamilySuite", label: "Family Suite", img: familySuite, price: 6000 },
+  { id: "PenthouseSuite", label: "Penthouse Suite", img: pentHouse, price: 12000 },
 ];
 
 const occupancyMap = {
@@ -31,7 +33,7 @@ const occupancyMap = {
   Twin: "couple",
   Deluxe: "couple",
   FamilySuite: "family",
-  PentHouse: "group",
+  PenthouseSuite: "group",
 };
 
 
@@ -46,6 +48,8 @@ export function Booking() {
   const [findClicked, setFindClicked] = useState(false);
   const [priceSort, setPriceSort] = useState(""); // "low" or "high"
   const [occupancyFilter, setOccupancyFilter] = useState(""); // "solo", "couple", "family", "group"
+  const [loading, setLoading] = useState(false);
+
 
   const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 : 0;
   const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
@@ -85,6 +89,8 @@ export function Booking() {
   }
 
   async function handleCheckout() {
+      if (loading) return; // prevent double click
+  setLoading(true);
     const response = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
@@ -96,22 +102,14 @@ export function Booking() {
           attributes: {
             send_email_receipt: true,
             line_items: [{
-              name: selectedRoom.label + " Room",
+              name: selectedRoom.label,
               quantity: 1,
               amount: totalPrice * 100, // Ensure totalPrice is a valid number
               currency: "PHP"
             }],
             payment_method_types: ["gcash", "card", "paymaya"],
-            success_url: "http://localhost:5173/success",
-            cancel_url: "http://localhost:5173/cancel",
-            metadata: {
-              booking_id: selectedRoom.id,
-              guest_Fname: guestInfo.Fname,
-              guest_LName: guestInfo.LName,
-              email: guestInfo.email,
-              phone: guestInfo.phone
-            }
-
+            success_url: "http://localhost:5173/",
+            cancel_url: "http://localhost:5173/booking",
           },
 
         },
@@ -119,6 +117,43 @@ export function Booking() {
     });
 
     const result = await response.json();
+    const checkout = result.data;
+
+    // Save session to Firestore
+   const bookingRef = await addDoc(collection(db, "bookings"), {
+      paymentId: checkout.id,
+      roomType: selectedRoom.label,
+      name: guestInfo.Fname,
+      email: guestInfo.email,
+      checkIn: checkIn,
+      checkOut: checkOut,
+      guests: guests,
+      roomId: "",
+      foodPackage: guestInfo.foodPackage,
+      phone: guestInfo.phone,
+      amount: totalPrice,
+      status: "paid",
+      createdAt: serverTimestamp()
+    });
+
+
+    await addDoc(collection(db, "payments"), {
+      bookingId: bookingRef.id,
+      paymentId: checkout.id,
+      roomType: selectedRoom.label,
+      name: guestInfo.Fname,
+      email: guestInfo.email,
+      checkIn: checkIn,
+      checkOut: checkOut,
+      foodPackage: guestInfo.foodPackage,
+      phone: guestInfo.phone,
+      amount: totalPrice,
+      status: "paid",
+      createdAt: serverTimestamp()
+    });
+
+
+
     if (result.data) window.location.href = result.data.attributes.checkout_url;
     else alert("Error: " + JSON.stringify(result));
   }

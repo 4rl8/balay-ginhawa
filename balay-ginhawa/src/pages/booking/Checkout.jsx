@@ -13,9 +13,9 @@ export function Checkout({
   function handleChange(e) {
     setGuestInfo({ ...guestInfo, [e.target.name]: e.target.value });
   }
-  
-//   const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 : 0;
-// const total = selectedRoom.price + foodPackageFee;
+
+  //   const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 : 0;
+  // const total = selectedRoom.price + foodPackageFee;
 
   // Calculate tax and fees (12% of room price, minimum 200)
 
@@ -28,13 +28,18 @@ export function Checkout({
           </button>
           <form className="flex flex-col gap-4" onSubmit={e => e.preventDefault()}>
             <h2 className="text-2xl font-bold mb-2">Guest Information</h2>
-            {["First Name", "Surname", "email", "phone"].map(field => (
+            {[
+              { name: "Fname", label: "First Name" },
+              { name: "Lname", label: "Surname" },
+              { name: "email", label: "Email" },
+              { name: "phone", label: "Phone" },
+            ].map(field => (
               <input
-                key={field}
-                type={field === "email" ? "email" : "text"}
-                name={field}
-                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                value={guestInfo[field]}
+                key={field.name}
+                type={field.name === "email" ? "email" : "text"}
+                name={field.name}
+                placeholder={field.label}
+                value={guestInfo[field.name]}
                 onChange={handleChange}
                 className="border border-gray-300 rounded px-4 py-2"
                 required

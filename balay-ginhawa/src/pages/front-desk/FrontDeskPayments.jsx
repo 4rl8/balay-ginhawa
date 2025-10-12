@@ -5,8 +5,6 @@ import Table from "@/components/Table";
 import { db } from "../../config/firebase-config";
 import {
   collection,
-  doc,
-  getDoc,
   addDoc,
   serverTimestamp,
   onSnapshot,

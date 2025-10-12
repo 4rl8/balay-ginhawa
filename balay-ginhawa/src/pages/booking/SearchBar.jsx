@@ -40,6 +40,7 @@ export function SearchBar({ checkIn, setCheckIn, checkOut, setCheckOut, guests, 
         <input
           type="number"
           min="1"
+          max="10"
           value={guests}
           onChange={e => setGuests(Number(e.target.value))}
           className="px-4 py-2 rounded border border-gray-300 h-10 w-20"
