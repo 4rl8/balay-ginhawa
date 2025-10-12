@@ -23,7 +23,7 @@ export default function Dropdown({ roomNo, onSelect, onAddTask }) {
   //label - default text na makikita sa dropdown bago pumili ng option
   //options - listahan ng mga pwedeng pagpiliang status ng room
   const label = "Change Status";
-  const options = ["Available", "Booked", "Maintenance"];
+  const options = ["Available", "For Cleaning", "Maintenance"];
 
   //handleSelect - function na tinatawag pag nag click ng isang option
   //ilalagay sa selected state kung ano yung pinindot na option
@@ -40,24 +40,23 @@ export default function Dropdown({ roomNo, onSelect, onAddTask }) {
   //kung may laman, tatawagin si onAddTask callback (kung meron) at ipapasa yung object na may roomNo at description
   //ire-reset ang taskDescription para malinis ulit yung input box then isasara yung popup
   // Save to housekeepingTasks collection
-const handleAddTask = async () => {
-  if (taskDescription.trim()) {
-    try {
-      await addDoc(collection(db, "housekeepingTasks"), {
-        roomId: roomNo,
-        task: taskDescription,
-        status: "pending",
-        assignmentAt: serverTimestamp(),
-      });
+  const handleAddTask = async () => {
+    if (taskDescription.trim()) {
+      try {
+        await addDoc(collection(db, "housekeepingTasks"), {
+          roomId: roomNo,
+          task: taskDescription,
+          status: "pending",
+          assignmentAt: serverTimestamp(),
+        });
 
-      setTaskDescription("");
-      setShowPopup(false);
-    } catch (err) {
-      console.error("Error adding task:", err);
+        setTaskDescription("");
+        setShowPopup(false);
+      } catch (err) {
+        console.error("Error adding task:", err);
+      }
     }
-  }
-};
-
+  };
 
   return (
     <div className="relative inline-block text-left w-32">
@@ -110,8 +109,7 @@ const handleAddTask = async () => {
       {showPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="bg-white border-2 border-green-600 rounded-xl shadow-lg p-6 w-[400px] relative">
-           
-                {/* Popup Title */}
+            {/* Popup Title */}
             <h2 className="text-lg font-semibold mb-4">Add Maintenance Task:</h2>
 
             <p className="mb-2">
@@ -149,7 +147,6 @@ const handleAddTask = async () => {
                 Cancel
               </button>
             </div>
-
           </div>
         </div>
       )}

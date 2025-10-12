@@ -3,36 +3,32 @@ import { FrontDeskHeader } from "@/components/FrontDeskHeader";
 import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
 import Table from "@/components/Table";
 import { db } from "../../config/firebase-config";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  onSnapshot,
-} from "firebase/firestore";
-import * as XLSX from "xlsx"; // Added for Excel export
+import { collection, addDoc, serverTimestamp, onSnapshot,} from "firebase/firestore";
+import * as XLSX from "xlsx";
 
-// Component na ginagamit sa bawat row ng table para sa actions (Add Charges at Checkout)
-function PaymentActions({ guest, room, bookingId }) {
+// --- Actions for each row (Add Charges + Checkout) ---
+function PaymentActions({ bookingId, name, room }) {
   const [showPopup, setShowPopup] = useState(false);
   const [chargeDesc, setChargeDesc] = useState("");
   const [chargeAmount, setChargeAmount] = useState("");
 
   const handleSaveCharge = async () => {
+    if (!chargeDesc || !chargeAmount) return alert("Please enter description and amount");
+
     try {
       await addDoc(collection(db, "payments"), {
         bookingId,
-        guestName: guest,
-        roomNo: room,
+        name,
+        roomId: room,
         paymentType: "Additional Charge",
         description: chargeDesc,
-        amount: Number(chargeAmount) || 0,
+        amount: Number(chargeAmount),
         date: serverTimestamp(),
       });
 
       setChargeDesc("");
       setChargeAmount("");
       setShowPopup(false);
-      alert("Charge added successfully!");
     } catch (err) {
       console.error("Error saving charge:", err);
     }
@@ -64,7 +60,7 @@ function PaymentActions({ guest, room, bookingId }) {
             <h2 className="text-lg font-semibold mb-4">Add Additional Charge</h2>
 
             <p className="mb-4">
-              <strong>Guest:</strong> {guest} <br />
+              <strong>Guest:</strong> {name} <br />
               <strong>Room:</strong> {room}
             </p>
 
@@ -83,7 +79,7 @@ function PaymentActions({ guest, room, bookingId }) {
               Amount:
             </label>
             <input
-              type="text"
+              type="number"
               value={chargeAmount}
               onChange={(e) => setChargeAmount(e.target.value)}
               placeholder="Enter amount..."
@@ -103,40 +99,48 @@ function PaymentActions({ guest, room, bookingId }) {
   );
 }
 
+// --- Main Payments Table ---
 export function FrontDeskPayments() {
   const headers = [
-    "Guest Name",
+    "Name",
     "Room No.",
     "Room Type",
     "Payment Type",
-    "Description",
     "Amount",
-    "Date",
+    "Check In",
     "Action",
   ];
 
-  const [rows, setRows] = useState([]);
   const [paymentsRaw, setPaymentsRaw] = useState([]);
-  const [range, setRange] = useState("all");
+  const [chargesRaw, setChargesRaw] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [range, setRange] = useState("current"); // <-- default to "current"
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [toggleCharges, setToggleCharges] = useState({});
 
+  // --- Fetch payments and additional charges ---
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "payments"), async (snapshot) => {
-      const payments = await Promise.all(
-        snapshot.docs.map(async (docSnap) => ({ id: docSnap.id, data: docSnap.data() }))
-      );
-      setPaymentsRaw(payments);
+    const unsub = onSnapshot(collection(db, "payments"), (snapshot) => {
+      const allPayments = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setPaymentsRaw(allPayments.filter((p) => !p.paymentType || p.paymentType !== "Additional Charge"));
+      setChargesRaw(allPayments.filter((p) => p.paymentType === "Additional Charge"));
     });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  const getRangeBounds = (r) => {
+  // --- Filter logic ---
+  const getRangeBounds = () => {
     const now = new Date();
     let from = null;
     let to = null;
-    switch (r) {
+
+    switch (range) {
+      case "today":
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
       case "week":
         from = new Date();
         from.setDate(now.getDate() - 7);
@@ -160,6 +164,7 @@ export function FrontDeskPayments() {
         from = customFrom ? new Date(customFrom) : null;
         to = customTo ? new Date(customTo) : null;
         break;
+      case "all":
       default:
         from = null;
         to = null;
@@ -167,98 +172,122 @@ export function FrontDeskPayments() {
     return { from, to };
   };
 
-  const filterPaymentByRange = (p) => {
-    const d = p.data.date?.toDate ? p.data.date.toDate() : p.data.date instanceof Date ? p.data.date : null;
-    if (!d) return range === "all" || range === "";
-    const { from, to } = getRangeBounds(range);
+  const filterByRange = (payment) => {
+    const checkIn = payment.checkIn?.toDate ? payment.checkIn.toDate() : payment.checkIn instanceof Date ? payment.checkIn : null;
+    const checkOut = payment.checkOut?.toDate ? payment.checkOut.toDate() : payment.checkOut instanceof Date ? payment.checkOut : null;
+    const now = new Date();
+
+    if (range === "current") {
+      // Only show payments where now is between checkIn and checkOut
+      if (!checkIn || !checkOut) return false;
+      return now >= checkIn && now <= checkOut;
+    }
+
+    if (!checkIn) return true;
+    const { from, to } = getRangeBounds();
     if (!from && !to) return true;
-    if (from && to) return d >= from && d <= to;
-    if (from && !to) return d >= from;
-    if (!from && to) return d <= to;
+    if (from && to) return checkIn >= from && checkIn <= to;
+    if (from && !to) return checkIn >= from;
+    if (!from && to) return checkIn <= to;
     return true;
   };
 
+  // --- Build rows with toggle for additional charges ---
   useEffect(() => {
-    const rowsBuilt = paymentsRaw.map((p) => {
-      const data = p.data;
+    const filteredPayments = paymentsRaw.filter(filterByRange);
 
-      let guestName = data.guestName || "Unknown";
-      let roomNo = data.roomNo || "-";
-      let roomTypeName = "-";
+    const tableRows = filteredPayments.map((p) => {
+      const pCharges = chargesRaw.filter((c) => c.bookingId === p.bookingId);
+      const checkInFormatted = p.checkIn?.toDate ? p.checkIn.toDate().toLocaleDateString() : "-";
 
-      const formattedDate = data.date?.toDate ? data.date.toDate().toLocaleDateString() : "N/A";
+      const totalAmount = p.amount + pCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
 
-      return { id: p.id, display: [guestName, roomNo, roomTypeName, data.paymentType || "N/A", data.description || "-", data.amount ? `₱ ${data.amount}` : "₱ 0.00", formattedDate], raw: data };
+      return [
+        p.name || "Unknown",
+        p.roomId || "-",
+        p.roomType || "-",
+        p.payment || "-",
+        `₱ ${totalAmount.toLocaleString()}`,
+        checkInFormatted,
+        <div key={p.bookingId} className="flex flex-col gap-1">
+          <PaymentActions bookingId={p.bookingId} name={p.name} room={p.roomId} />
+
+          {pCharges.length > 0 && (
+            <>
+              <button
+                onClick={() =>
+                  setToggleCharges((prev) => ({
+                    ...prev,
+                    [p.bookingId]: !prev[p.bookingId],
+                  }))
+                }
+                className="text-sm text-blue-600 underline mt-1"
+              >
+                {toggleCharges[p.bookingId]
+                  ? "Hide Additional Charges"
+                  : `Show Additional Charges (${pCharges.length})`}
+              </button>
+
+              {toggleCharges[p.bookingId] &&
+                pCharges.map((c) => (
+                  <div key={c.id} className="ml-4 text-sm text-gray-700">
+                    {c.description} - ₱ {c.amount}
+                  </div>
+                ))}
+            </>
+          )}
+        </div>,
+      ];
     });
 
-    const filtered = rowsBuilt.filter((r, i) => filterPaymentByRange(paymentsRaw[i]));
-    const tableRows = filtered.map((r) => [...r.display, <PaymentActions key={r.id} guest={r.display[0]} room={r.display[1]} bookingId={r.raw?.bookingId} />]);
     setRows(tableRows);
-  }, [paymentsRaw, range, customFrom, customTo]);
+  }, [paymentsRaw, chargesRaw, range, customFrom, customTo, toggleCharges]);
 
-  // Updated CSV -> Excel download with adjusted column widths
-  const downloadPaymentsCsv = () => {
-    const filtered = paymentsRaw.filter(filterPaymentByRange);
-    if (!filtered.length) {
-      alert("No payment records to download for the selected range.");
-      return;
-    }
+  // --- Excel Export ---
+  const downloadPaymentsExcel = () => {
+    const filteredPayments = paymentsRaw.filter(filterByRange);
+    if (!filteredPayments.length) return alert("No records to export");
 
-    const data = filtered.map((p) => {
-      const d = p.data;
-      const date = d.date?.toDate
-        ? d.date.toDate().toLocaleString()
-        : d.date instanceof Date
-        ? d.date.toLocaleString()
-        : "";
+    const data = filteredPayments.map((p) => {
+      const pCharges = chargesRaw.filter((c) => c.bookingId === p.bookingId);
+      const totalAmount = p.amount + pCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
+
       return {
-        ID: p.id,
-        GuestName: d.guestName || "",
-        RoomNo: d.roomNo || "",
-        PaymentType: d.paymentType || "",
-        Description: d.description || "",
-        Amount: d.amount || 0,
-        Date: date,
+        Name: p.name || "",
+        RoomNo: p.roomId || "",
+        RoomType: p.roomType || "",
+        PaymentType: p.payment || "",
+        Amount: totalAmount,
+        CheckIn: p.checkIn?.toDate ? p.checkIn.toDate().toLocaleString() : "",
+        AdditionalCharges: pCharges.map((c) => `${c.description} ₱ ${c.amount}`).join("; "),
       };
     });
 
-    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(data);
-
-    // Compute column widths based on longest text
     const colWidths = Object.keys(data[0]).map((key) => ({
-      wch: Math.max(
-        key.length,
-        ...data.map((row) => String(row[key] || "").length)
-      ) + 2,
+      wch: Math.max(key.length, ...data.map((row) => String(row[key] || "").length)) + 2,
     }));
     ws["!cols"] = colWidths;
 
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Payments");
-
-    // Write to Excel file
-    XLSX.writeFile(wb, `payments_${range || "all"}.xlsx`);
+    XLSX.writeFile(wb, `payments_${range}.xlsx`);
   };
-
-  const rowsWithActions = rows.map((row, i) => [
-    ...row.slice(0, 7),
-    <PaymentActions key={i} guest={row[0]} room={row[1]} bookingId={row[7]} />,
-  ]);
 
   return (
     <>
       <title>balay Ginhawa</title>
       <FrontDeskHeader />
-
       <div className="flex">
         <FrontDeskSidePanel active="Payments" />
         <main className="flex-1 p-6 bg-[#FDF4EC] min-h-screen">
+          {/* Filter controls */}
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-2">
               <label className="text-sm">Range:</label>
               <select value={range} onChange={(e) => setRange(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                <option value="current">Current</option>
+                <option value="today">Today</option>
                 <option value="all">All time</option>
                 <option value="week">Last 7 days</option>
                 <option value="month">This month</option>
@@ -274,10 +303,15 @@ export function FrontDeskPayments() {
               )}
             </div>
 
-            <button onClick={downloadPaymentsCsv} className="ml-auto px-3 py-1 bg-green-600 text-white rounded-sm text-sm hover:bg-green-700">Download Excel</button>
+            <button
+              onClick={downloadPaymentsExcel}
+              className="ml-auto px-3 py-1 bg-green-600 text-white rounded-sm text-sm hover:bg-green-700"
+            >
+              Download Excel
+            </button>
           </div>
 
-          <Table headers={headers} rows={rowsWithActions} />
+          <Table headers={headers} rows={rows} />
         </main>
       </div>
     </>

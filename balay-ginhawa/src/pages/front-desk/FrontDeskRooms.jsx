@@ -4,10 +4,9 @@ import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
 import Dropdown from "@/components/Dropdown";
 import Table from "@/components/Table";
 import { db } from "../../config/firebase-config";
-import { collection, onSnapshot, updateDoc, doc, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import {collection, onSnapshot, updateDoc, doc,} from "firebase/firestore";
 
 export function FrontDeskRooms() {
-  // Ito yung mga header ng table, fixed values na ipapakita sa taas ng bawat column
   const headers = [
     "Room No.",
     "Type",
@@ -18,13 +17,12 @@ export function FrontDeskRooms() {
     "Change Availability",
   ];
 
-  // State para sa rows ng table, naglalaman ng data ng bawat room
   const [rows, setRows] = useState([]);
+
   useEffect(() => {
-    // We'll subscribe to roomTypes, rooms, and bookings and rebuild rows whenever any change.
     let latestRoomTypes = {};
     let latestRoomsDocs = [];
-    let latestBookingsMap = {}; // roomId (string) -> latest checkOut (Date or Timestamp)
+    let latestBookingsMap = {};
 
     const unsubRoomTypes = onSnapshot(collection(db, "roomTypes"), (snap) => {
       const map = {};
@@ -44,47 +42,74 @@ export function FrontDeskRooms() {
         const data = d.data();
         const rid = data.roomId;
         const co = data.checkOut;
-        // Normalize to Date for easy comparison
         let date = null;
         if (co?.toDate) date = co.toDate();
         else if (co instanceof Date) date = co;
-
         if (!rid || !date) return;
 
-        // Keep the latest (max) checkOut per roomId
+        // Keep only the latest checkout per room
         if (!map[rid] || map[rid] < date) map[rid] = date;
       });
       latestBookingsMap = map;
       rebuildRows();
     });
 
-    function rebuildRows() {
+    async function rebuildRows() {
       if (!latestRoomsDocs) return;
-      const rowsBuilt = latestRoomsDocs.map((docSnap) => {
-        const data = docSnap.data();
-        const typeData = latestRoomTypes[data.roomTypeId] || {};
+      const now = new Date();
 
-        const price = data.pricePerNight && data.pricePerNight > 0 ? data.pricePerNight : typeData.basePrice || 0;
+      const rowsBuilt = await Promise.all(
+        latestRoomsDocs.map(async (docSnap) => {
+          const data = docSnap.data();
+          const typeData = latestRoomTypes[data.roomTypeId] || {};
+          const price =
+            data.pricePerNight && data.pricePerNight > 0
+              ? data.pricePerNight
+              : typeData.basePrice || 0;
 
-        // Try bookings map by doc id first, then by roomNumber
-        let formattedDate = "-";
-        const byDoc = latestBookingsMap[docSnap.id];
-        const byNumber = data.roomNumber ? latestBookingsMap[data.roomNumber] : null;
-        const useDate = byDoc || byNumber || null;
-        if (useDate) {
-          formattedDate = useDate.toLocaleDateString();
-        }
+          // Get latest check-out date
+          const byDoc = latestBookingsMap[docSnap.id];
+          const byNumber = data.roomNumber
+            ? latestBookingsMap[data.roomNumber]
+            : null;
+          const latestCheckOut = byDoc || byNumber || null;
 
-        return [
-          data.roomNumber || "N/A",
-          typeData.name || data.roomTypeId || "N/A",
-          data.status || "inactive",
-          data.availability || "vacant",
-          `₱ ${price.toLocaleString()}`,
-          formattedDate,
-          docSnap.id,
-        ];
-      });
+          let formattedDate = "-";
+          if (latestCheckOut) {
+            formattedDate = latestCheckOut.toLocaleDateString();
+          }
+
+          let newAvailability = data.availability || "Available";
+          let newStatus = data.status || "inactive";
+
+          // If check-out has passed → mark as "For Cleaning" & inactive
+          if (latestCheckOut && latestCheckOut < now) {
+            if (data.availability !== "For Cleaning") {
+              newAvailability = "For Cleaning";
+              newStatus = "inactive";
+
+              try {
+                await updateDoc(doc(db, "rooms", docSnap.id), {
+                  availability: newAvailability,
+                  status: newStatus,
+                });
+              } catch (err) {
+                console.error("Error auto-updating room:", err);
+              }
+            }
+          }
+
+          return [
+            data.roomNumber || "N/A",
+            typeData.name || data.roomTypeId || "N/A",
+            newStatus,
+            newAvailability,
+            `₱ ${price.toLocaleString()}`,
+            formattedDate,
+            docSnap.id,
+          ];
+        })
+      );
 
       setRows(rowsBuilt);
     }
@@ -96,19 +121,37 @@ export function FrontDeskRooms() {
     };
   }, []);
 
-  // Function na ginagamit kapag may pinili sa dropdown para baguhin ang availability ng room
   const handleAvailabilityChange = async (rowIndex, newAvailability) => {
-    const roomId = rows[rowIndex][6]; // Kinukuha yung Firestore doc ID ng tamang room
+    const roomId = rows[rowIndex][6];
+    let newStatus = "active";
+
+    // If set to Maintenance or For Cleaning → inactive
+    if (
+      newAvailability === "Maintenance" ||
+      newAvailability === "For Cleaning"
+    ) {
+      newStatus = "inactive";
+    }
+
     try {
-      // Ina-update ang availability field ng specific room sa Firestore
       await updateDoc(doc(db, "rooms", roomId), {
         availability: newAvailability,
+        status: newStatus,
       });
 
-      // Ina-update din local state para agad mag reflect sa UI nang hindi nag re reload
       setRows((prevRows) =>
         prevRows.map((row, i) =>
-          i === rowIndex ? [...row.slice(0, 3), newAvailability, ...row.slice(4)] : row
+          i === rowIndex
+            ? [
+                row[0],
+                row[1],
+                newStatus,
+                newAvailability,
+                row[4],
+                row[5],
+                row[6],
+              ]
+            : row
         )
       );
     } catch (err) {
@@ -116,9 +159,8 @@ export function FrontDeskRooms() {
     }
   };
 
-  // Dinadagdagan ang bawat row ng dropdown component sa dulo ng row
   const rowsWithDropdown = rows.map((row, i) => [
-    ...row.slice(0, 6), // Lahat ng fields maliban sa doc ID
+    ...row.slice(0, 6),
     <Dropdown
       key={i}
       roomNo={row[0]}
@@ -129,15 +171,10 @@ export function FrontDeskRooms() {
   return (
     <>
       <title>balay Ginhawa</title>
-
-      {/* Header component para sa front desk UI */}
       <FrontDeskHeader />
-
       <div className="flex">
-        {/* Side panel component, naka highlight ang "Rooms" */}
         <FrontDeskSidePanel active="Rooms" />
         <main className="flex-1 p-6 bg-[#FDF4EC] min-h-screen">
-          {/* Table component kung saan pinapasa ang headers at rows */}
           <Table headers={headers} rows={rowsWithDropdown} />
         </main>
       </div>

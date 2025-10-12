@@ -4,64 +4,180 @@ import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
 import Table from "@/components/Table";
 import Popup from "@/components/Popup";
 import { db } from "../../config/firebase-config";
-import {
-  collection,
-  onSnapshot,
-  addDoc,
-  serverTimestamp,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
+import {collection, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, query, where, getDocs,} from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+const normalizeRoomType = (type) => {
+  if (!type) return "";
+  const lower = type.toLowerCase();
+  if (lower.includes("standard")) return "Standard";
+  if (lower.includes("deluxe")) return "Deluxe";
+  if (lower.includes("twin")) return "Twin";
+  if (lower.includes("family")) return "FamilySuite";
+  if (lower.includes("penthouse")) return "PenthouseSuite";
+  return type; // fallback if it doesn't match known types
+};
+
+
 export function FrontDeskBookings() {
-  // Table headers
+  // Table headers (keep exactly as you had)
   const headers = ["Guest Name", "Check-in", "Check-out", "Status", "Actions"];
+
+  // raw state and derived rows
   const [rows, setRows] = useState([]);
   const [bookingsRaw, setBookingsRaw] = useState([]);
+
+  // Add/edit UI
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editDocId, setEditDocId] = useState(null);
-  const [editData, setEditData] = useState({});
-  const [originalTypes, setOriginalTypes] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // State para sa booking form fields
-  const [form, setForm] = useState({
+  // Form state (used for both Add and Edit)
+  const emptyForm = {
     name: "",
     email: "",
     phone: "",
     guests: 1,
-    roomId: "",
+    roomId: "", // only id user chooses
+    roomType: "", // string name or id from roomTypes
+    amount: "",
     payment: "cash",
     checkIn: "",
     checkOut: "",
-  });
+    foodPackage: "no",
+    status: "Unassigned",
+    paymentId: "",
+  };
+  const [form, setForm] = useState(emptyForm);
 
-  // Real-time listener para sa bookings collection
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "bookings"), (querySnap) => {
-      const all = querySnap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        data: docSnap.data(),
-      }));
-      setBookingsRaw(all);
-    });
+  // roomTypes and rooms
+  const [roomTypes, setRoomTypes] = useState([]); // { id/name, basePrice, ... }
+  const [availableRooms, setAvailableRooms] = useState([]); // all available rooms
+  const [roomsByType, setRoomsByType] = useState([]); // filtered by selected roomType
 
-    // Cleanup function para hindi mag memory leak
-    return () => unsub();
-  }, []);
-
-  // Date filter state
-  const [range, setRange] = useState("all");
+  // For date filters
+  const [range, setRange] = useState("current"); // default to today
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
+  // load bookings realtime
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "bookings"), (snap) => {
+      const all = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+      setBookingsRaw(all);
+    });
+    return () => unsub();
+  }, []);
+
+  // load roomTypes once (we assume there's a collection named roomTypes)
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "roomTypes"), (snap) => {
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      // If no roomTypes exist, fallback
+      const defaultTypes = [
+        { name: "Deluxe", basePrice: 4000, description: "", maxGuests: 2 },
+        { name: "FamilySuite", basePrice: 6000, description: "", maxGuests: 4 },
+        { name: "PenthouseSuite", basePrice: 15000, description: "", maxGuests: 6 },
+        { name: "Standard", basePrice: 3000, description: "", maxGuests: 2 },
+        { name: "Twin", basePrice: 3500, description: "", maxGuests: 2 },
+      ];
+
+      const list = all.length ? all : defaultTypes;
+
+      const normalizedRoomTypes = list.map((r) => ({
+        id: r.id || r.name,
+        name: r.name || r.id,
+        displayName: r.name || r.id,
+        normalized: normalizeRoomType(r.name || r.id),
+        basePrice: r.basePrice || 0,
+      }));
+
+      setRoomTypes(normalizedRoomTypes);
+    });
+
+    return () => unsub();
+  }, []);
+
+
+  // load available rooms realtime
+  useEffect(() => {
+    const q = query(collection(db, "rooms"), where("availability", "in", ["Available", "available"]));
+    // Note: Firestore 'in' requires array non-empty; using onSnapshot on collection and filtering client-side is safer for older DBs.
+    const unsub = onSnapshot(collection(db, "rooms"), (snap) => {
+      const allRooms = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // keep only those with availability 'Available' (case-insensitive)
+      const avail = allRooms.filter((r) => (r.availability || "").toLowerCase() === "available");
+      setAvailableRooms(avail);
+    });
+    return () => unsub();
+  }, []);
+
+  // whenever roomType changes in form, update roomsByType
+  useEffect(() => {
+    if (!form.roomType) {
+      setRoomsByType([]);
+      return;
+    }
+
+    const filtered = availableRooms.filter((r) => {
+      const roomTypeVal = normalizeRoomType(r.roomType || r.roomTypeId || "");
+      return roomTypeVal.toLowerCase() === normalizeRoomType(form.roomType).toLowerCase();
+    });
+
+    setRoomsByType(filtered);
+
+
+    // set amount to basePrice if roomType exists
+    const rtObj = roomTypes.find(
+      (rt) =>
+        normalizeRoomType(rt.displayName).toLowerCase() === normalizeRoomType(form.roomType).toLowerCase()
+    );
+
+    if (rtObj && (!form.amount || form.amount === "")) {
+      setForm((prev) => ({ ...prev, amount: rtObj.basePrice || "" }));
+    }
+  }, [form.roomType, availableRooms, roomTypes]);
+
+  // Helper: converts booking data checkIn/checkOut (timestamp or Date) to yyyy-mm-dd for inputs
+  const toDateInputValue = (val) => {
+    if (!val) return "";
+    try {
+      if (val.toDate) {
+        // Firestore Timestamp
+        const d = val.toDate();
+        return d.toISOString().split("T")[0];
+      }
+      if (val instanceof Date) {
+        // JS Date
+        return val.toISOString().split("T")[0];
+      }
+      if (typeof val === "string") {
+        // Already stored as string (e.g., "2025-10-15T00:00:00.000Z" or "2025-10-15")
+        const d = new Date(val);
+        if (!isNaN(d)) return d.toISOString().split("T")[0];
+        // if string is already "YYYY-MM-DD"
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+      }
+    } catch (err) {
+      console.warn("Invalid date value:", val, err);
+    }
+    return "";
+  };
+
+  // compute default bounds & helpers
   const getRangeBounds = (r) => {
     const now = new Date();
     let from = null;
     let to = null;
     switch (r) {
+      case "today": {
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+      }
       case "week":
         from = new Date();
         from.setDate(now.getDate() - 7);
@@ -85,6 +201,11 @@ export function FrontDeskBookings() {
         from = customFrom ? new Date(customFrom) : null;
         to = customTo ? new Date(customTo) : null;
         break;
+      case "current":
+        // "current" doesn't need bounds; handled in filter
+        from = null;
+        to = null;
+        break;
       default:
         from = null;
         to = null;
@@ -92,56 +213,62 @@ export function FrontDeskBookings() {
     return { from, to };
   };
 
+  // use checkIn and checkOut to filter
   const filterBookingByRange = (booking) => {
-    const d =
+    const checkIn =
       booking.data.checkIn?.toDate?.() ||
-      (booking.data.checkIn instanceof Date ? booking.data.checkIn : null) ||
+      (booking.data.checkIn instanceof Date ? booking.data.checkIn : null);
+    const checkOut =
       booking.data.checkOut?.toDate?.() ||
       (booking.data.checkOut instanceof Date ? booking.data.checkOut : null);
-    if (!d) return range === "all" || range === "";
+
+    const today = new Date();
+
+    if (range === "current") {
+      if (!checkIn || !checkOut) return false;
+      return today >= checkIn && today <= checkOut;
+    }
+
     const { from, to } = getRangeBounds(range);
-    if (!from && !to) return true; // all time
+
+    // fallback for other ranges
+    const d = checkIn || checkOut;
+    if (!d) return range === "all" || range === "" || range === "today";
+    if (!from && !to) return true;
     if (from && to) return d >= from && d <= to;
     if (from && !to) return d >= from;
     if (!from && to) return d <= to;
     return true;
   };
 
-  // derive rows from bookingsRaw and current filter
+  // derive rows for table (display normalization only — does not write to Firestore)
   useEffect(() => {
     const rowsBuilt = bookingsRaw.map((b) => {
       const data = b.data;
       const checkIn =
         data.checkIn?.toDate?.().toLocaleDateString() ||
-        (data.checkIn instanceof Date
-          ? data.checkIn.toLocaleDateString()
-          : "N/A");
+        (data.checkIn instanceof Date ? data.checkIn.toLocaleDateString() : "N/A");
       const checkOut =
         data.checkOut?.toDate?.().toLocaleDateString() ||
-        (data.checkOut instanceof Date
-          ? data.checkOut.toLocaleDateString()
-          : "N/A");
+        (data.checkOut instanceof Date ? data.checkOut.toLocaleDateString() : "N/A");
+
+      // Normalize display status: do not write to firestore here
+      const displayStatus = data.roomId ? "Assigned" : "Unassigned";
+
+      // display name is flat (per your new collection structure)
       return {
         id: b.id,
-        display: [
-          data.guestInfo?.name || "Unknown",
-          checkIn,
-          checkOut,
-          data.status || "Pending",
-        ],
+        display: [data.name || "Unknown", checkIn, checkOut, displayStatus],
         raw: data,
       };
     });
 
-    const filtered = rowsBuilt.filter((r, i) =>
-      filterBookingByRange(bookingsRaw[i])
-    );
-
+    const filtered = rowsBuilt.filter((r, i) => filterBookingByRange(bookingsRaw[i]));
     const tableRows = filtered.map((r) => [
       ...r.display,
       <button
         key={`edit-${r.id}`}
-        onClick={() => openEditModal(r.id, r.raw)}
+        onClick={() => openEditForId(r.id, r.raw)}
         className="px-2 py-1 bg-gray-200 rounded-md text-xs hover:bg-gray-300 inline-block"
       >
         Edit
@@ -150,182 +277,260 @@ export function FrontDeskBookings() {
     setRows(tableRows);
   }, [bookingsRaw, range, customFrom, customTo]);
 
-// Download bookings as Excel using SheetJS
-const downloadBookingsExcel = () => {
-  const filtered = bookingsRaw.filter(filterBookingByRange);
-  if (!filtered.length) {
-    alert("No records to download for the selected range.");
-    return;
-  }
-
-  const data = filtered.map((b) => {
-    const d = b.data;
-    const checkIn =
-      d.checkIn?.toDate?.().toISOString() ||
-      (d.checkIn instanceof Date ? d.checkIn.toISOString() : "");
-    const checkOut =
-      d.checkOut?.toDate?.().toISOString() ||
-      (d.checkOut instanceof Date ? d.checkOut.toISOString() : "");
-    const createdAt =
-      d.createdAt?.toDate?.().toISOString() ||
-      (d.createdAt instanceof Date ? d.createdAt.toISOString() : "");
-    return {
-      ID: b.id,
-      GuestName: d.guestInfo?.name || "",
-      Email: d.guestInfo?.email || "",
-      Phone: d.guestInfo?.phone || "",
-      Guests: d.guests || "",
-      RoomID: d.roomId || "",
-      Payment: d.payment || "",
-      CheckIn: checkIn,
-      CheckOut: checkOut,
-      Status: d.status || "",
-      CreatedAt: createdAt,
-    };
-  });
-
-  const worksheet = XLSX.utils.json_to_sheet(data);
-
-  // === Auto-adjust column widths ===
-  const objectMaxLength = [];
-  const keys = Object.keys(data[0]);
-  keys.forEach((key, i) => {
-    const columnLengths = data.map((row) =>
-      row[key] ? row[key].toString().length : 0
-    );
-    const headerLength = key.length;
-    const maxLength = Math.max(headerLength, ...columnLengths);
-    objectMaxLength[i] = maxLength;
-  });
-  worksheet["!cols"] = objectMaxLength.map((len) => ({ wch: len + 2 }));
-
-  // Create workbook and export
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-  saveAs(blob, `bookings_${range || "all"}.xlsx`);
-};
-
-
-  // Update form state kapag may pagbabago sa inputs
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Open edit modal and prepare flattened editable data
-  const openEditModal = (id, dataObj) => {
-    const flat = {};
-    const types = {};
-
-    const recurse = (obj, prefix = "") => {
-      Object.keys(obj || {}).forEach((key) => {
-        const val = obj[key];
-        const path = prefix ? `${prefix}.${key}` : key;
-
-        if (val && typeof val.toDate === "function") {
-          const iso = val.toDate().toISOString().slice(0, 10);
-          flat[path] = iso;
-          types[path] = "timestamp";
-        } else if (val instanceof Date) {
-          flat[path] = val.toISOString().slice(0, 10);
-          types[path] = "date";
-        } else if (val && typeof val === "object" && !Array.isArray(val)) {
-          recurse(val, path);
-        } else {
-          flat[path] = val;
-          types[path] = typeof val;
-        }
-      });
-    };
-
-    recurse(dataObj);
-    setEditDocId(id);
-    setEditData(flat);
-    setOriginalTypes(types);
-    setShowEditModal(true);
-  };
-
-  const handleEditChange = (key, value) => {
-    setEditData((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const unflatten = (flatObj) => {
-    const out = {};
-    Object.keys(flatObj).forEach((path) => {
-      const parts = path.split(".");
-      let cur = out;
-      for (let i = 0; i < parts.length; i++) {
-        const p = parts[i];
-        if (i === parts.length - 1) {
-          const type = originalTypes[path];
-          let val = flatObj[path];
-          if (type === "timestamp" || type === "date") {
-            val = val ? new Date(val) : null;
-          } else if (type === "number") {
-            val = val === "" || val === null ? null : Number(val);
-          }
-          cur[p] = val;
-        } else {
-          cur[p] = cur[p] || {};
-          cur = cur[p];
-        }
-      }
-    });
-    return out;
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editDocId) return;
-    const updated = unflatten(editData);
-    try {
-      await updateDoc(doc(db, "bookings", editDocId), updated);
-      setShowEditModal(false);
-      setEditDocId(null);
-      setEditData({});
-      setOriginalTypes({});
-    } catch (err) {
-      console.error("Error updating booking:", err);
+  // ===== Excel export (kept same) =====
+  const downloadBookingsExcel = () => {
+    const filtered = bookingsRaw.filter(filterBookingByRange);
+    if (!filtered.length) {
+      alert("No records to download for the selected range.");
+      return;
     }
+
+    const data = filtered.map((b) => {
+      const d = b.data;
+      const checkIn =
+        d.checkIn?.toDate?.().toISOString() ||
+        (d.checkIn instanceof Date ? d.checkIn.toISOString() : "");
+      const checkOut =
+        d.checkOut?.toDate?.().toISOString() ||
+        (d.checkOut instanceof Date ? d.checkOut.toISOString() : "");
+      const createdAt =
+        d.createdAt?.toDate?.().toISOString() ||
+        (d.createdAt instanceof Date ? d.createdAt.toISOString() : "");
+      return {
+        ID: b.id,
+        Name: d.name || "",
+        Email: d.email || "",
+        Phone: d.phone || "",
+        Guests: d.guests || "",
+        RoomType: d.roomType || "",
+        RoomID: d.roomId || "",
+        Amount: d.amount || "",
+        CheckIn: checkIn,
+        CheckOut: checkOut,
+        Status: d.status || "",
+        CreatedAt: createdAt,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+
+    // Auto-adjust column widths
+    const objectMaxLength = [];
+    const keys = Object.keys(data[0] || {});
+    keys.forEach((key, i) => {
+      const columnLengths = data.map((row) => (row[key] ? row[key].toString().length : 0));
+      const headerLength = key.length;
+      const maxLength = Math.max(headerLength, ...columnLengths);
+      objectMaxLength[i] = maxLength;
+    });
+    worksheet["!cols"] = objectMaxLength.map((len) => ({ wch: len + 2 }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `bookings_${range || "all"}.xlsx`);
   };
 
-  // Add booking sa Firestore
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await addDoc(collection(db, "bookings"), {
-        guestInfo: {
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-        },
-        guests: Number(form.guests),
-        roomId: form.roomId,
-        payment: form.payment,
-        checkIn: new Date(form.checkIn),
-        checkOut: new Date(form.checkOut),
-        createdAt: serverTimestamp(),
-        status: "Pending",
-      });
+  // ===== Add flow =====
+  const openAddModal = () => {
+    setIsEditing(false);
+    setEditingId(null);
+    setForm((prev) => ({ ...emptyForm }));
+    setShowModal(true);
+  };
 
+  // helper to generate a random-ish paymentId (you can replace with your own generator)
+  const genPaymentId = () => {
+    return "cs_" + Math.random().toString(36).slice(2, 12);
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Ensure all fields are present
+      const bookingData = {
+        name: form.name || "",
+        email: form.email || "",
+        phone: form.phone || "",
+        guests: form.guests ? Number(form.guests) : 1,
+        roomId: form.roomId || "",       // <--- always include, even if empty
+        roomType: form.roomType || "",
+        amount: Number(form.amount || 0),
+        payment: form.payment || "cash",
+        foodPackage: form.foodPackage || "no",
+        checkIn: form.checkIn ? new Date(form.checkIn) : null,
+        checkOut: form.checkOut ? new Date(form.checkOut) : null,
+        status: form.roomId ? "Assigned" : "Unassigned",
+        paymentId: "",                   // placeholder
+        createdAt: serverTimestamp(),
+      };
+
+      // Add booking first
+      const bookingRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      // Then create the payment record
+      const paymentData = {
+        bookingId: bookingRef.id,
+        paymentId: "",   // placeholder, will update below
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone,
+        guests: bookingData.guests,
+        roomId: bookingData.roomId,
+        roomType: bookingData.roomType,
+        amount: bookingData.amount,
+        payment: bookingData.payment,
+        foodPackage: bookingData.foodPackage,
+        checkIn: bookingData.checkIn,
+        checkOut: bookingData.checkOut,
+        status: "paid",
+        createdAt: serverTimestamp(),
+      };
+
+      const paymentRef = await addDoc(collection(db, "payments"), paymentData);
+
+      // Now update both sides so booking has paymentId and payment has it too
+      await updateDoc(paymentRef, { paymentId: paymentRef.id });
+      await updateDoc(bookingRef, { paymentId: paymentRef.id });
+
+      console.log("Booking and Payment linked successfully!");
       setShowModal(false);
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-        guests: 1,
-        roomId: "",
-        payment: "cash",
-        checkIn: "",
-        checkOut: "",
-      });
+      setForm(emptyForm);
     } catch (err) {
       console.error("Error adding booking:", err);
     }
   };
 
+  // ===== Edit flow =====
+  // open edit modal and populate form with booking fields
+  const openEditForId = (id, data) => {
+  setIsEditing(true);
+  setEditingId(id);
+
+  // ensure checkIn and checkOut are properly converted
+  const checkInValue = toDateInputValue(data.checkIn);
+  const checkOutValue = toDateInputValue(data.checkOut);
+
+  setForm({
+    name: data.name || "",
+    email: data.email || "",
+    phone: data.phone || "",
+    guests: data.guests || 1,
+    roomId: data.roomId || "",
+    roomType: data.roomType || "",
+    amount: data.amount || "",
+    payment: data.payment || "cash",
+    checkIn: checkInValue,
+    checkOut: checkOutValue,
+    foodPackage: data.foodPackage || "no",
+    status: data.status || (data.roomId ? "Assigned" : "Unassigned"),
+    paymentId: data.paymentId || "",
+  });
+
+  setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingId) return;
+
+    const prevBooking = bookingsRaw.find((b) => b.id === editingId);
+    const prevRoomId = prevBooking?.data?.roomId || "";
+
+    const updated = {
+      name: form.name || "",
+      email: form.email || "",
+      phone: form.phone || "",
+      guests: Number(form.guests || 1),
+      roomId: form.roomId || "", // ensures field exists
+      roomType: form.roomType || "",
+      amount: Number(form.amount || 0),
+      payment: form.payment || "cash",
+      checkIn: new Date(form.checkIn),
+      checkOut: new Date(form.checkOut),
+      foodPackage: form.foodPackage || "no",
+      status: form.roomId ? "Assigned" : "Unassigned",
+      paymentId: form.paymentId || "",
+    };
+
+    try {
+      // Update bookings document
+      await updateDoc(doc(db, "bookings", editingId), updated);
+
+      // Update payments document(s) that match paymentId
+      if (updated.paymentId) {
+        const q = query(collection(db, "payments"), where("paymentId", "==", updated.paymentId));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          for (const pdoc of snap.docs) {
+            await updateDoc(doc(db, "payments", pdoc.id), {
+              ...updated, // same fields
+            });
+          }
+        }
+      }
+
+      // Room availability adjustments
+      if (prevRoomId && prevRoomId !== updated.roomId) {
+        await updateDoc(doc(db, "rooms", prevRoomId), { availability: "Available" });
+      }
+      if (updated.roomId && prevRoomId !== updated.roomId) {
+        await updateDoc(doc(db, "rooms", updated.roomId), { availability: "Booked" });
+      }
+
+      setShowEditModal(false);
+      setEditingId(null);
+      setIsEditing(false);
+      setForm(emptyForm);
+    } catch (err) {
+      console.error("Error updating booking & payment:", err);
+      alert("Update failed - check console");
+    }
+  };
+
+  // Update form on input change
+const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  setForm((prev) => {
+    let updated = { ...prev, [name]: value };
+
+    // Handle food package pricing logic
+    if (name === "foodPackage") {
+      const currentAmount = parseFloat(prev.amount || 0);
+
+      if (value === "yes") {
+        updated.amount = currentAmount + 500;
+      } else if (value === "no" && prev.foodPackage === "yes") {
+        updated.amount = Math.max(currentAmount - 500, 0); // remove 500 if switching from yes to no
+      }
+    }
+
+    return updated;
+  });
+};
+
+
+  // When roomType dropdown changes we already update roomsByType via effect.
+  // But make sure amount uses basePrice if present
+  const handleRoomTypeChange = (val) => {
+    const rtObj = roomTypes.find(
+      (rt) => rt.normalized.toLowerCase() === normalizeRoomType(val).toLowerCase()
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      roomType: rtObj ? rtObj.displayName : val, // ensure dropdown displays nicely
+      roomId: "", // reset room selection
+      amount: rtObj?.basePrice || prev.amount,
+    }));
+  };
+
+
+
+  // Render
   return (
     <>
       <title>balay Ginhawa</title>
@@ -337,7 +542,7 @@ const downloadBookingsExcel = () => {
         <main className="flex-1 p-6 bg-[#FDF4EC] min-h-screen">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => setShowModal(true)}
+              onClick={openAddModal}
               className="px-5 py-2 bg-gray-300 text-black rounded-sm"
             >
               Add Booking
@@ -350,6 +555,8 @@ const downloadBookingsExcel = () => {
                 onChange={(e) => setRange(e.target.value)}
                 className="border rounded px-2 py-1 text-sm"
               >
+                <option value="current">Current</option>
+                <option value="today">Today</option>
                 <option value="all">All time</option>
                 <option value="week">Last 7 days</option>
                 <option value="month">This month</option>
@@ -385,140 +592,206 @@ const downloadBookingsExcel = () => {
 
           <Table headers={headers} rows={rows} />
 
-          {/* Popup for Add Booking */}
+          {/* Add Booking popup */}
           <Popup isOpen={showModal} onClose={() => setShowModal(false)}>
             <h2 className="text-lg font-bold mb-4">Add Booking</h2>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                type="text"
-                name="name"
-                placeholder="Guest Name"
-                value={form.name}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-                required
-              />
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-              />
-              <input
-                type="text"
-                name="phone"
-                placeholder="Phone"
-                value={form.phone}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-              />
-              <input
-                type="number"
-                name="guests"
-                placeholder="Guests"
-                value={form.guests}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-                min="1"
-              />
-              <input
-                type="text"
-                name="roomId"
-                placeholder="Room ID (e.g. R001)"
-                value={form.roomId}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-                required
-              />
-              <select
-                name="payment"
-                value={form.payment}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-              >
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-              </select>
-              <input
-                type="date"
-                name="checkIn"
-                value={form.checkIn}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-                required
-              />
-              <input
-                type="date"
-                name="checkOut"
-                value={form.checkOut}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1"
-                required
-              />
+            <form onSubmit={handleAddSubmit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium">Guest Name</label>
+                <input type="text" name="name" value={form.name} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Email</label>
+                <input type="email" name="email" value={form.email} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Phone</label>
+                <input type="text" name="phone" value={form.phone} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Guests</label>
+                <input type="number" name="guests" value={form.guests} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" min="1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Room Type</label>
+                <select name="roomType" value={form.roomType} onChange={(e) => handleRoomTypeChange(e.target.value)}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="">Select room type (optional)</option>
+                  {roomTypes.map((rt) => (
+                    <option key={rt.name || rt.id} value={rt.name || rt.id}>
+                      {rt.name || rt.id} {rt.basePrice ? ` — ₱ ${rt.basePrice}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Room ID</label>
+                <select name="roomId" value={form.roomId} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="">No room assigned</option>
+                  {roomsByType.map((r) => (
+                    <option key={r.roomNumber || r.id} value={r.id || r.roomNumber}>
+                      {r.roomNumber || r.id} {r.pricePerNight ? ` — ₱ ${r.pricePerNight}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Amount</label>
+                <input type="number" name="amount" value={form.amount} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Food Package</label>
+                <select name="foodPackage" value={form.foodPackage} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Payment Method</label>
+                <select name="payment" value={form.payment} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Check-In Date</label>
+                <input type="date" name="checkIn" value={form.checkIn} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Check-Out Date</label>
+                <input type="date" name="checkOut" value={form.checkOut} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
 
               <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded"
-                >
-                  Save
-                </button>
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Create</button>
               </div>
             </form>
           </Popup>
 
-          {/* Edit modal */}
+
+          {/* Edit Booking popup */}
           <Popup isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
             <h2 className="text-lg font-bold mb-4">Edit Booking</h2>
             <form onSubmit={handleEditSubmit} className="space-y-3">
-              {Object.keys(editData).length === 0 && (
-                <div className="text-gray-500">No editable fields</div>
-              )}
+              <div>
+                <label className="block text-sm font-medium">Guest Name</label>
+                <input type="text" name="name" value={form.name} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
 
-              {Object.entries(editData).map(([key, value]) => {
-                const inputType =
-                  originalTypes[key] === "timestamp" ||
-                  originalTypes[key] === "date"
-                    ? "date"
-                    : typeof value === "number"
-                    ? "number"
-                    : "text";
-                return (
-                  <div key={key} className="space-y-1">
-                    <label className="text-sm text-gray-600">{key}</label>
-                    <input
-                      type={inputType}
-                      value={value ?? ""}
-                      onChange={(e) => handleEditChange(key, e.target.value)}
-                      className="w-full border rounded px-2 py-1"
-                    />
-                  </div>
-                );
-              })}
+              <div>
+                <label className="block text-sm font-medium">Email</label>
+                <input type="email" name="email" value={form.email} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Phone</label>
+                <input type="text" name="phone" value={form.phone} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Guests</label>
+                <input type="number" name="guests" value={form.guests} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" min="1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Room Type</label>
+                <select name="roomType" value={(form.roomType)}
+                  onChange={(e) => handleRoomTypeChange(e.target.value)}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="">Select room type (optional)</option>
+                  {roomTypes.map((rt) => (
+                    <option key={rt.name || rt.id} value={rt.name || rt.id}>
+                      {rt.name || rt.id} {rt.basePrice ? `— ₱ ${rt.basePrice}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Room ID</label>
+                <select name="roomId" value={form.roomId} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="">No room assigned</option>
+                  {form.roomId && !roomsByType.some((r) => (r.id || r.roomNumber) === form.roomId) ? (
+                    <option value={form.roomId}>{form.roomId} (current)</option>
+                  ) : null}
+                  {roomsByType.map((r) => (
+                    <option key={r.roomNumber || r.id} value={r.id || r.roomNumber}>
+                      {r.roomNumber || r.id} {r.pricePerNight ? ` — ₱ ${r.pricePerNight}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Amount</label>
+                <input type="number" name="amount" value={form.amount} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Food Package</label>
+                <select name="foodPackage" value={form.foodPackage} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Status</label>
+                <select name="status" value={form.status} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1">
+                  <option value="Unassigned">Unassigned</option>
+                  <option value="Assigned">Assigned</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Check-In Date</label>
+                <input type="date" name="checkIn" value={form.checkIn} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium">Check-Out Date</label>
+                <input type="date" name="checkOut" value={form.checkOut} onChange={handleChange}
+                  className="w-full border rounded px-2 py-1" required />
+              </div>
 
               <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded"
-                >
-                  Save
-                </button>
+                <button type="button" onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
               </div>
             </form>
           </Popup>
