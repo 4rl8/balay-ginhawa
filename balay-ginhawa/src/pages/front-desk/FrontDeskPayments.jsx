@@ -5,6 +5,8 @@ import Table from "@/components/Table";
 import { db } from "../../config/firebase-config";
 import { collection, addDoc, serverTimestamp, onSnapshot,} from "firebase/firestore";
 import * as XLSX from "xlsx";
+import { Toaster, toast } from "react-hot-toast";
+
 
 // --- Actions for each row (Add Charges + Checkout) ---
 function PaymentActions({ bookingId, name, room }) {
@@ -13,7 +15,8 @@ function PaymentActions({ bookingId, name, room }) {
   const [chargeAmount, setChargeAmount] = useState("");
 
   const handleSaveCharge = async () => {
-    if (!chargeDesc || !chargeAmount) return alert("Please enter description and amount");
+    if (!chargeDesc || !chargeAmount) return 
+    toast.error("Please enter description and amount");
 
     try {
       await addDoc(collection(db, "payments"), {
@@ -30,7 +33,7 @@ function PaymentActions({ bookingId, name, room }) {
       setChargeAmount("");
       setShowPopup(false);
     } catch (err) {
-      console.error("Error saving charge:", err);
+      toast.error("Failed to save charge. Please try again.");
     }
   };
 
@@ -246,7 +249,8 @@ export function FrontDeskPayments() {
   // --- Excel Export ---
   const downloadPaymentsExcel = () => {
     const filteredPayments = paymentsRaw.filter(filterByRange);
-    if (!filteredPayments.length) return alert("No records to export");
+    if (!filteredPayments.length) return 
+    toast.error("No records to export");
 
     const data = filteredPayments.map((p) => {
       const pCharges = chargesRaw.filter((c) => c.bookingId === p.bookingId);
@@ -278,6 +282,7 @@ export function FrontDeskPayments() {
     <>
       <title>balay Ginhawa</title>
       <FrontDeskHeader />
+                      <Toaster position="bottom-right" reverseOrder={false} />
       <div className="flex">
         <FrontDeskSidePanel active="Payments" />
         <main className="flex-1 p-6 bg-[#FDF4EC] min-h-screen">

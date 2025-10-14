@@ -4,19 +4,38 @@ import { FrontDeskSidePanel } from "@/components/FrontDeskSidePanel";
 import Table from "@/components/Table";
 import Popup from "@/components/Popup";
 import { db } from "../../config/firebase-config";
-import {collection, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, query, where, getDocs,} from "firebase/firestore";
+import {collection, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, deleteDoc, query, where, getDocs,} from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { Toaster, toast } from "react-hot-toast";
 
 const normalizeRoomType = (type) => {
   if (!type) return "";
-  const lower = type.toLowerCase();
+
+  const lower = type.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "");
+
   if (lower.includes("standard")) return "Standard";
   if (lower.includes("deluxe")) return "Deluxe";
   if (lower.includes("twin")) return "Twin";
-  if (lower.includes("family")) return "FamilySuite";
-  if (lower.includes("penthouse")) return "PenthouseSuite";
-  return type; // fallback if it doesn't match known types
+  if (lower.includes("familysuite") || lower.includes("family")) return "FamilySuite";
+  if (lower.includes("penthousesuite") || lower.includes("penthouse")) return "PenthouseSuite";
+
+  return type; // fallback for unexpected names
+};
+
+const formatDateForInput = (dateValue) => {
+  if (!dateValue) return "";
+
+  // Firestore timestamp object → JS Date
+  if (dateValue.toDate) dateValue = dateValue.toDate();
+
+  // ISO string → JS Date
+  if (typeof dateValue === "string") dateValue = new Date(dateValue);
+
+  // Return YYYY-MM-DD (adjusted for local timezone)
+  const offset = dateValue.getTimezoneOffset();
+  const localDate = new Date(dateValue.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split("T")[0];
 };
 
 
@@ -61,7 +80,7 @@ export function FrontDeskBookings() {
   const [range, setRange] = useState("current"); // default to today
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-
+  
   // load bookings realtime
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "bookings"), (snap) => {
@@ -281,7 +300,7 @@ export function FrontDeskBookings() {
   const downloadBookingsExcel = () => {
     const filtered = bookingsRaw.filter(filterBookingByRange);
     if (!filtered.length) {
-      alert("No records to download for the selected range.");
+      toast.error("No records to download for the selected range.");
       return;
     }
 
@@ -406,30 +425,39 @@ export function FrontDeskBookings() {
   // ===== Edit flow =====
   // open edit modal and populate form with booking fields
   const openEditForId = (id, data) => {
-  setIsEditing(true);
-  setEditingId(id);
+    setIsEditing(true);
+    setEditingId(id);
 
-  // ensure checkIn and checkOut are properly converted
-  const checkInValue = toDateInputValue(data.checkIn);
-  const checkOutValue = toDateInputValue(data.checkOut);
+    // Normalize and format
+    const normalizedRoomType = normalizeRoomType(data.roomType);
+    const checkInValue = formatDateForInput(data.checkIn);
+    const checkOutValue = formatDateForInput(data.checkOut);
 
-  setForm({
-    name: data.name || "",
-    email: data.email || "",
-    phone: data.phone || "",
-    guests: data.guests || 1,
-    roomId: data.roomId || "",
-    roomType: data.roomType || "",
-    amount: data.amount || "",
-    payment: data.payment || "cash",
-    checkIn: checkInValue,
-    checkOut: checkOutValue,
-    foodPackage: data.foodPackage || "no",
-    status: data.status || (data.roomId ? "Assigned" : "Unassigned"),
-    paymentId: data.paymentId || "",
-  });
+    // Always recalculate correct total, regardless of source
+    const recalculatedAmount = calculateTotalAmount(
+      normalizedRoomType,
+      data.foodPackage || "no",
+      checkInValue,
+      checkOutValue
+    );
 
-  setShowEditModal(true);
+    setForm({
+      name: data.name || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      guests: data.guests || 1,
+      roomId: data.roomId || "",
+      roomType: normalizedRoomType || "",
+      amount: recalculatedAmount || data.amount || 0,
+      payment: data.payment || "cash",
+      checkIn: checkInValue,
+      checkOut: checkOutValue,
+      foodPackage: data.foodPackage || "no",
+      status: data.status || (data.roomId ? "Assigned" : "Unassigned"),
+      paymentId: data.paymentId || "",
+    });
+
+    setShowEditModal(true);
   };
 
   const handleEditSubmit = async (e) => {
@@ -439,14 +467,22 @@ export function FrontDeskBookings() {
     const prevBooking = bookingsRaw.find((b) => b.id === editingId);
     const prevRoomId = prevBooking?.data?.roomId || "";
 
+    // Always recalc latest total before save
+    const finalAmount = calculateTotalAmount(
+      form.roomType,
+      form.foodPackage,
+      form.checkIn,
+      form.checkOut
+    );
+
     const updated = {
       name: form.name || "",
       email: form.email || "",
       phone: form.phone || "",
       guests: Number(form.guests || 1),
-      roomId: form.roomId || "", // ensures field exists
+      roomId: form.roomId || "",
       roomType: form.roomType || "",
-      amount: Number(form.amount || 0),
+      amount: Number(finalAmount || 0),
       payment: form.payment || "cash",
       checkIn: new Date(form.checkIn),
       checkOut: new Date(form.checkOut),
@@ -456,77 +492,173 @@ export function FrontDeskBookings() {
     };
 
     try {
-      // Update bookings document
+      //Update bookings document
       await updateDoc(doc(db, "bookings", editingId), updated);
 
-      // Update payments document(s) that match paymentId
+      //Update matching payments document(s)
       if (updated.paymentId) {
-        const q = query(collection(db, "payments"), where("paymentId", "==", updated.paymentId));
+        const q = query(
+          collection(db, "payments"),
+          where("paymentId", "==", updated.paymentId)
+        );
         const snap = await getDocs(q);
         if (!snap.empty) {
           for (const pdoc of snap.docs) {
-            await updateDoc(doc(db, "payments", pdoc.id), {
-              ...updated, // same fields
-            });
+            await updateDoc(doc(db, "payments", pdoc.id), updated);
           }
         }
       }
 
-      // Room availability adjustments
-      if (prevRoomId && prevRoomId !== updated.roomId) {
-        await updateDoc(doc(db, "rooms", prevRoomId), { availability: "Available" });
-      }
-      if (updated.roomId && prevRoomId !== updated.roomId) {
-        await updateDoc(doc(db, "rooms", updated.roomId), { availability: "Booked" });
-      }
+        // Room availability adjustments
+        if (prevRoomId && prevRoomId !== updated.roomId) {
+          await updateDoc(doc(db, "rooms", prevRoomId), { availability: "Available" });
+        }
+        if (updated.roomId && prevRoomId !== updated.roomId) {
+          await updateDoc(doc(db, "rooms", updated.roomId), { availability: "Booked" });
+        }
 
-      setShowEditModal(false);
-      setEditingId(null);
-      setIsEditing(false);
-      setForm(emptyForm);
-    } catch (err) {
-      console.error("Error updating booking & payment:", err);
-      alert("Update failed - check console");
+        setShowEditModal(false);
+        setEditingId(null);
+        setIsEditing(false);
+        setForm(emptyForm);
+      } catch (err) {
+        console.error("Error updating booking & payment:", err);
+        toast.error("Update failed - check console");
+      }
+    };
+
+const handleDelete = async (id) => {
+  if (!id) return;
+
+  // Custom centered confirmation toast that stays until dismissed
+  toast.custom(
+    (t) => (
+      <div
+        className={`bg-white shadow-lg rounded-lg p-4 mt-100 flex flex-col gap-2 text-center w-[300px] transition-all ${
+          t.visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+        }`}
+      >
+        <p className="font-medium text-gray-800">Are you sure you want to delete this booking?</p>
+        <div className="flex gap-3 justify-center mt-2">
+          <button
+            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+            onClick={async () => {
+              toast.dismiss(t.id); // close the confirmation toast immediately
+
+              try {
+                // Get the booking first (to find related payment if any)
+                const booking = bookingsRaw.find((b) => b.id === id);
+                const paymentId = booking?.data?.paymentId;
+
+                // Delete booking document
+                await deleteDoc(doc(db, "bookings", id));
+
+                // Optionally delete matching payment
+                if (paymentId) {
+                  const q = query(collection(db, "payments"), where("paymentId", "==", paymentId));
+                  const snap = await getDocs(q);
+                  for (const docSnap of snap.docs) {
+                    await deleteDoc(doc(db, "payments", docSnap.id));
+                  }
+                }
+
+                // Update UI immediately
+                setBookingsRaw((prev) => prev.filter((b) => b.id !== id));
+
+                // Close modal and reset edit states
+                setShowEditModal(false);
+                setIsEditing(false);
+                setEditingId(null);
+
+                toast.success("Booking deleted successfully!");
+              } catch (error) {
+                console.error("Error deleting booking:", error);
+                toast.error("Failed to delete booking.");
+              }
+            }}
+          >
+            Yes
+          </button>
+
+          <button
+            className="bg-gray-300 hover:bg-gray-400 text-black px-3 py-1 rounded"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            No
+          </button>
+        </div>
+      </div>
+    ),
+    {
+      id: "delete-confirm-toast",
+      duration: Infinity,
+      position: "top-center",
     }
-  };
+  );
+};
+
+
+  const calculateTotalAmount = (roomType, foodPackage, checkIn, checkOut) => {
+  if (!roomType || !checkIn || !checkOut) return 0;
+
+  // Find the base price for selected room
+  const selectedRoom = roomTypes.find(
+    (r) => normalizeRoomType(r.name || r.id) === normalizeRoomType(roomType)
+  );
+  const basePrice = selectedRoom?.basePrice || 0;
+
+  // Calculate number of nights
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  const nights = Math.max(
+    1,
+    Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+  );
+
+  // Food package (₱500 per night)
+  const foodCostPerNight = foodPackage === "yes" ? 500 : 0;
+
+  // Total
+  return (basePrice + foodCostPerNight) * nights;
+};
+
 
   // Update form on input change
 const handleChange = (e) => {
   const { name, value } = e.target;
 
   setForm((prev) => {
-    let updated = { ...prev, [name]: value };
+    const updated = { ...prev, [name]: value };
 
-    // Handle food package pricing logic
-    if (name === "foodPackage") {
-      const currentAmount = parseFloat(prev.amount || 0);
-
-      if (value === "yes") {
-        updated.amount = currentAmount + 500;
-      } else if (value === "no" && prev.foodPackage === "yes") {
-        updated.amount = Math.max(currentAmount - 500, 0); // remove 500 if switching from yes to no
-      }
+    // Recalculate total whenever these change
+    if (["roomType", "checkIn", "checkOut", "foodPackage"].includes(name)) {
+      updated.amount = calculateTotalAmount(
+        updated.roomType,
+        updated.foodPackage,
+        updated.checkIn,
+        updated.checkOut
+      );
     }
 
     return updated;
   });
 };
 
-
   // When roomType dropdown changes we already update roomsByType via effect.
   // But make sure amount uses basePrice if present
-  const handleRoomTypeChange = (val) => {
-    const rtObj = roomTypes.find(
-      (rt) => rt.normalized.toLowerCase() === normalizeRoomType(val).toLowerCase()
+const handleRoomTypeChange = (selectedType) => {
+  setForm((prev) => {
+    const updated = { ...prev, roomType: selectedType };
+    updated.amount = calculateTotalAmount(
+      selectedType,
+      prev.foodPackage,
+      prev.checkIn,
+      prev.checkOut
     );
+    return updated;
+  });
+};
 
-    setForm((prev) => ({
-      ...prev,
-      roomType: rtObj ? rtObj.displayName : val, // ensure dropdown displays nicely
-      roomId: "", // reset room selection
-      amount: rtObj?.basePrice || prev.amount,
-    }));
-  };
 
 
 
@@ -535,7 +667,7 @@ const handleChange = (e) => {
     <>
       <title>balay Ginhawa</title>
       <FrontDeskHeader />
-
+                <Toaster position="bottom-right" reverseOrder={false} />
       <div className="flex">
         <FrontDeskSidePanel active="Bookings" />
 
@@ -691,110 +823,190 @@ const handleChange = (e) => {
           </Popup>
 
 
-          {/* Edit Booking popup */}
-          <Popup isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
-            <h2 className="text-lg font-bold mb-4">Edit Booking</h2>
-            <form onSubmit={handleEditSubmit} className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium">Guest Name</label>
-                <input type="text" name="name" value={form.name} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" required />
-              </div>
+            {/* Edit Booking popup */}
+            <Popup isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
+              <h2 className="text-lg font-bold mb-4">Edit Booking</h2>
+              <form onSubmit={handleEditSubmit} className="space-y-3">
+                {/* Guest Info */}
+                <div>
+                  <label className="block text-sm font-medium">Guest Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Email</label>
-                <input type="email" name="email" value={form.email} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Phone</label>
-                <input type="text" name="phone" value={form.phone} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Phone</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Guests</label>
-                <input type="number" name="guests" value={form.guests} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" min="1" />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Guests</label>
+                  <input
+                    type="number"
+                    name="guests"
+                    value={form.guests}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    min="1"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Room Type</label>
-                <select name="roomType" value={(form.roomType)}
-                  onChange={(e) => handleRoomTypeChange(e.target.value)}
-                  className="w-full border rounded px-2 py-1">
-                  <option value="">Select room type (optional)</option>
-                  {roomTypes.map((rt) => (
-                    <option key={rt.name || rt.id} value={rt.name || rt.id}>
-                      {rt.name || rt.id} {rt.basePrice ? `— ₱ ${rt.basePrice}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Room Type */}
+                <div>
+                  <label className="block text-sm font-medium">Room Type</label>
+                  <select
+                    name="roomType"
+                    value={normalizeRoomType(form.roomType)}
+                    onChange={(e) => handleRoomTypeChange(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                  >
+                    <option value="">Select room type (optional)</option>
+                    {roomTypes.map((rt) => (
+                      <option key={rt.name || rt.id} value={normalizeRoomType(rt.name || rt.id)}>
+                        {rt.name || rt.id} {rt.basePrice ? `— ₱ ${rt.basePrice}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Room ID</label>
-                <select name="roomId" value={form.roomId} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1">
-                  <option value="">No room assigned</option>
-                  {form.roomId && !roomsByType.some((r) => (r.id || r.roomNumber) === form.roomId) ? (
-                    <option value={form.roomId}>{form.roomId} (current)</option>
-                  ) : null}
-                  {roomsByType.map((r) => (
-                    <option key={r.roomNumber || r.id} value={r.id || r.roomNumber}>
-                      {r.roomNumber || r.id} {r.pricePerNight ? ` — ₱ ${r.pricePerNight}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Room ID */}
+                <div>
+                  <label className="block text-sm font-medium">Room ID</label>
+                  <select
+                    name="roomId"
+                    value={form.roomId}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  >
+                    <option value="">No room assigned</option>
+                    {form.roomId &&
+                      !roomsByType.some((r) => (r.id || r.roomNumber) === form.roomId) && (
+                        <option value={form.roomId}>{form.roomId} (current)</option>
+                      )}
+                    {roomsByType.map((r) => (
+                      <option key={r.roomNumber || r.id} value={r.id || r.roomNumber}>
+                        {r.roomNumber || r.id}{" "}
+                        {r.pricePerNight ? ` — ₱ ${r.pricePerNight}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Amount</label>
-                <input type="number" name="amount" value={form.amount} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Amount</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={form.amount}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Food Package</label>
-                <select name="foodPackage" value={form.foodPackage} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1">
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Food Package</label>
+                  <select
+                    name="foodPackage"
+                    value={form.foodPackage}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Status</label>
-                <select name="status" value={form.status} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1">
-                  <option value="Unassigned">Unassigned</option>
-                  <option value="Assigned">Assigned</option>
-                  <option value="paid">Paid</option>
-                  <option value="pending">Pending</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Status</label>
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  >
+                    <option value="Unassigned">Unassigned</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Check-In Date</label>
-                <input type="date" name="checkIn" value={form.checkIn} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" required />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Check-In Date</label>
+                  <input
+                    type="date"
+                    name="checkIn"
+                    value={form.checkIn}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium">Check-Out Date</label>
-                <input type="date" name="checkOut" value={form.checkOut} onChange={handleChange}
-                  className="w-full border rounded px-2 py-1" required />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium">Check-Out Date</label>
+                  <input
+                    type="date"
+                    name="checkOut"
+                    value={form.checkOut}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  />
+                </div>
 
-              <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
-              </div>
-            </form>
-          </Popup>
+                {/* Buttons */}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 bg-gray-300 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Save
+                  </button>
+
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(editingId)}
+                      className="px-4 py-2 bg-red-600 text-white rounded"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </form>
+            </Popup>
         </main>
       </div>
     </>

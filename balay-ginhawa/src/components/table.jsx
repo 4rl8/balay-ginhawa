@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 export default function Table({ headers, rows }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
-  // Function to handle sorting when a header is clicked
+  // 🧭 Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(20); // Default 20 per page
+
+  // Handle sorting
   const handleSort = (index) => {
     if (sortConfig.key === index) {
-      // Toggle direction: asc → desc → null → asc ...
       const nextDirection =
         sortConfig.direction === "asc"
           ? "desc"
@@ -19,7 +22,7 @@ export default function Table({ headers, rows }) {
     }
   };
 
-  // Arrow for header
+  // Get arrow indicator
   const getArrow = (index) => {
     if (sortConfig.key !== index) return "⇅";
     if (sortConfig.direction === "asc") return "↑";
@@ -27,41 +30,60 @@ export default function Table({ headers, rows }) {
     return "⇅";
   };
 
-  // Sorting logic
-  let sortedRows = [...rows];
-  if (sortConfig.key !== null && sortConfig.direction) {
-    const key = sortConfig.key;
-    const dir = sortConfig.direction;
+  // 🧠 useMemo for efficient sorting
+  const sortedRows = useMemo(() => {
+    let temp = [...rows];
+    if (sortConfig.key !== null && sortConfig.direction) {
+      const key = sortConfig.key;
+      const dir = sortConfig.direction;
 
-    sortedRows.sort((a, b) => {
-      const valA = a[key];
-      const valB = b[key];
+      temp.sort((a, b) => {
+        const valA = a[key];
+        const valB = b[key];
 
-      // Skip sorting if column contains React element
-      if (typeof valA === "object" || typeof valB === "object") return 0;
+        if (typeof valA === "object" || typeof valB === "object") return 0;
 
-      // Check if values are dates
-      const dateA = new Date(valA);
-      const dateB = new Date(valB);
-      if (!isNaN(dateA) && !isNaN(dateB)) {
-        return dir === "asc" ? dateA - dateB : dateB - dateA;
-      }
+        const dateA = new Date(valA);
+        const dateB = new Date(valB);
+        if (!isNaN(dateA) && !isNaN(dateB))
+          return dir === "asc" ? dateA - dateB : dateB - dateA;
 
-      // Check if values are numbers
-      const nA = parseFloat(String(valA).replace(/,/g, ""));
-      const nB = parseFloat(String(valB).replace(/,/g, ""));
-      const isNumA = !isNaN(nA);
-      const isNumB = !isNaN(nB);
-      if (isNumA && isNumB) {
-        return dir === "asc" ? nA - nB : nB - nA;
-      }
+        const nA = parseFloat(String(valA).replace(/,/g, ""));
+        const nB = parseFloat(String(valB).replace(/,/g, ""));
+        const isNumA = !isNaN(nA);
+        const isNumB = !isNaN(nB);
+        if (isNumA && isNumB) return dir === "asc" ? nA - nB : nB - nA;
 
-      // Fallback to string comparison
-      return dir === "asc"
-        ? String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: "base" })
-        : String(valB).localeCompare(String(valA), undefined, { numeric: true, sensitivity: "base" });
-    });
-  }
+        return dir === "asc"
+          ? String(valA).localeCompare(String(valB), undefined, {
+              numeric: true,
+              sensitivity: "base",
+            })
+          : String(valB).localeCompare(String(valA), undefined, {
+              numeric: true,
+              sensitivity: "base",
+            });
+      });
+    }
+    return temp;
+  }, [rows, sortConfig]);
+
+  // 🧩 Pagination logic
+  const totalPages =
+    rowsPerPage === "all" ? 1 : Math.ceil(sortedRows.length / rowsPerPage);
+  const startIndex =
+    rowsPerPage === "all" ? 0 : (currentPage - 1) * rowsPerPage;
+  const endIndex =
+    rowsPerPage === "all"
+      ? sortedRows.length
+      : startIndex + Number(rowsPerPage);
+  const currentRows = sortedRows.slice(startIndex, endIndex);
+
+  // 🧭 When rowsPerPage changes, reset to page 1
+  const handleRowsPerPageChange = (e) => {
+    setRowsPerPage(e.target.value);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="shadow-md mt-4 bg-white rounded-xl overflow-x-auto">
@@ -80,7 +102,7 @@ export default function Table({ headers, rows }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {sortedRows.map((row, rowIndex) => (
+          {currentRows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} className="px-4 py-2">
@@ -91,6 +113,48 @@ export default function Table({ headers, rows }) {
           ))}
         </tbody>
       </table>
+
+      {/* 🧭 Pagination Controls */}
+      <div className="flex justify-between items-center px-4 py-2 text-sm text-gray-700">
+        <div className="flex items-center gap-2">
+          <label htmlFor="rowsPerPage">Rows per page:</label>
+          <select
+            id="rowsPerPage"
+            value={rowsPerPage}
+            onChange={handleRowsPerPageChange}
+            className="border rounded px-2 py-1"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value="all">Show All</option>
+          </select>
+        </div>
+
+        {rowsPerPage !== "all" && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(p + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
