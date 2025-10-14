@@ -15,8 +15,7 @@ function PaymentActions({ bookingId, name, room }) {
   const [chargeAmount, setChargeAmount] = useState("");
 
   const handleSaveCharge = async () => {
-    if (!chargeDesc || !chargeAmount) return 
-    toast.error("Please enter description and amount");
+    if (!chargeDesc || !chargeAmount) return toast.error("Please enter description and amount");
 
     try {
       await addDoc(collection(db, "payments"), {
@@ -32,8 +31,7 @@ function PaymentActions({ bookingId, name, room }) {
       setChargeDesc("");
       setChargeAmount("");
       setShowPopup(false);
-    } catch (err) {
-      toast.error("Failed to save charge. Please try again.");
+    } catch (err) { toast.error("Failed to save charge. Please try again.");
     }
   };
 
@@ -249,8 +247,7 @@ export function FrontDeskPayments() {
   // --- Excel Export ---
   const downloadPaymentsExcel = () => {
     const filteredPayments = paymentsRaw.filter(filterByRange);
-    if (!filteredPayments.length) return 
-    toast.error("No records to export");
+    if (!filteredPayments.length) return toast.error("No records to export");
 
     const data = filteredPayments.map((p) => {
       const pCharges = chargesRaw.filter((c) => c.bookingId === p.bookingId);

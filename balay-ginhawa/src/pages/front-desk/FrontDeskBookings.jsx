@@ -659,9 +659,6 @@ const handleRoomTypeChange = (selectedType) => {
   });
 };
 
-
-
-
   // Render
   return (
     <>
