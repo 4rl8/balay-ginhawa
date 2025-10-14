@@ -36,7 +36,6 @@ export function useBookingLogic() {
       // Only consider rooms marked as "Available"
       if (!room.availability || room.availability.toLowerCase() !== "available") return;
 
-
       // Check if the room is booked for the selected dates
       const booked = bookings.some(b =>
         b.roomId === room.id &&

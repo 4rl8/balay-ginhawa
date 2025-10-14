@@ -1,61 +1,36 @@
 import { Header } from "../components/Header";
 import homeBG from '../assets/images/homeBG.svg';
-// import hellyeah from '../assets/images/homeBG2.svg';
 import homeimg1 from '../assets/images/home-img1.svg';
 import homeimg2 from '../assets/images/home-img2.svg';
 import homeimg3 from '../assets/images/home-img3.svg';
+import standard from "../assets/images/standard2.png";
+import feature1 from "../assets/images/feature1.jpg";
+import feature2 from "../assets/images/feature2.jpg";
+import feature3 from "../assets/images/feature3.jpg";
+import twin from "../assets/images/twin2.png";
+import deluxe from "../assets/images/deluxe2.png";
+import familySuite from "../assets/images/family2.png";
+import pentHouse from "../assets/images/penthouse2.png";
 import { Footer } from "@/components/footer";
-import homeimg4 from '../assets/images/BookNow.png';
 import ChatBot from "@/components/ChatBot/ChatBot";
-// import { db } from "@/config/firebase-config";
-// import { useState } from "react";
-// import { useEffect } from "react";
-// import { collection, getDocs } from "firebase/firestore";
-
- 
 
 export function HomePage() {
-
-
-  // const [rooms, setRooms] = useState([]);
-
-  // // read data from firestore
-  // useEffect(() => {
-  //   const fetchRooms = async () => {
-  //     const roomsCollection = collection(db, "rooms");
-  //     try {
-  //       const roomSnapshot = await getDocs(roomsCollection);
-  //       const roomList = roomSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  //       setRooms(roomList);
-  //     } catch (error) {
-  //       console.error("Error fetching rooms:", error);
-  //     }
-  //   };  
-
-  //   fetchRooms();
-      
-  // }, []);
-
-
   return (
     <>
       <title>Balay Ginhawa</title>
       <div className="relative">
-
         <img
-          src={homeBG} 
+          src={homeBG}
           alt="balay Ginhawa Logo"
-          className="absolute top-0 left-0 w-full h-90 object-cover -z-10"  
+          className="absolute top-0 left-0 w-full h-90 object-cover -z-10"
         />
         <Header />
         <div className="p-8 text-white py-8 ml-20 mt-20 h-40">
           <h1 className="text-5xl font-bold">Your Perfect Stay</h1>
           <h2 className="text-5xl font-bold" style={{ color: "#82A33D" }}>Starts Here</h2>
-             <p>“Let us take care of the details while you focus on enjoying your time away.”</p>
+          <p>“Let us take care of the details while you focus on enjoying your time away.”</p>
         </div>
       </div>
-      
-
 
       <div className="mx-auto px-4 py-20 w-[80%]">
         <div className="flex flex-col md:flex-row gap-6 items-start ">
@@ -66,7 +41,7 @@ export function HomePage() {
             </p>
             <p className="pt-10">    At Balay Ginhawa, every corner is inspired by the Philippines—its traditions, its hospitality, and its natural beauty. Whether you are here for relaxation, a cultural escape, or simply a break from the everyday, our doors are always open to welcome you like family.
               Come home to comfort. Experience the true meaning of ginhawa.</p>
-        </div>
+          </div>
 
           <div className="md:w-[40%] w-full">
             <div className="flex md:flex-row flex-col w-full gap-4">
@@ -94,13 +69,78 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="md:w-[40%] w-full">
-        <img src={homeimg4} alt="" />
+      {/* Feature Section */}
+      <div className="w-full bg-[#f7fafc] py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-10 text-[#82A33D]">Why Choose Balay Ginhawa?</h2>
+          <div className="flex flex-col md:flex-row gap-8 justify-center">
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6 flex flex-col items-center">
+              <img src={feature1} alt="Nature" className="w-20 h-20 mb-4 rounded-full object-cover" />
+              <h3 className="text-xl font-semibold mb-2">Nature-Inspired Retreat</h3>
+              <p className="text-gray-600 text-center">
+                Surrounded by lush gardens and tranquil views, our property is a sanctuary for relaxation and rejuvenation.
+              </p>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6 flex flex-col items-center">
+              <img src={feature2} alt="Filipino Hospitality" className="w-20 h-20 mb-4 rounded-full object-cover" />
+              <h3 className="text-xl font-semibold mb-2">Authentic Filipino Hospitality</h3>
+              <p className="text-gray-600 text-center">
+                Experience warm, personalized service and a genuine sense of home, rooted in Filipino values.
+              </p>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6 flex flex-col items-center">
+              <img src={feature3} alt="Amenities" className="w-20 h-20 mb-4 rounded-full object-cover" />
+              <h3 className="text-xl font-semibold mb-2">Modern Comforts & Amenities</h3>
+              <p className="text-gray-600 text-center">
+                Enjoy well-appointed rooms, delicious local cuisine, and amenities designed for your comfort and convenience.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <ChatBot />
+      {/* Gallery Section */}
+      <div className="max-w-7xl mx-auto px-4 py-16">
+        <h2 className="text-3xl font-bold text-center mb-10 text-[#82A33D]">Gallery</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
+          <img src={standard} alt="Standard Room" className="w-full h-56 object-cover rounded-lg shadow" />
+          <img src={twin} alt="Twin Room" className="w-full h-56 object-cover rounded-lg shadow" />
+          <img src={deluxe} alt="Deluxe Room" className="w-full h-56 object-cover rounded-lg shadow" />
+          <img src={familySuite} alt="Family Suite" className="w-full h-56 object-cover rounded-lg shadow" />
+          <img src={pentHouse} alt="Penthouse" className="w-full h-56 object-cover rounded-lg shadow" />
+        </div>
+      </div>
 
-    <Footer />
+      {/* Testimonials Section */}
+      <div className="w-full bg-[#f7fafc] py-16">
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-10 text-[#82A33D]">What Our Guests Say</h2>
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6">
+              <p className="italic text-gray-700 mb-4">
+                “A truly relaxing experience! The staff made us feel like family and the food was amazing.”
+              </p>
+              <div className="font-semibold text-[#82A33D]">– Maria S.</div>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6">
+              <p className="italic text-gray-700 mb-4">
+                “The gardens are beautiful and the rooms are spotless. We’ll definitely be back!”
+              </p>
+              <div className="font-semibold text-[#82A33D]">– John D.</div>
+            </div>
+            <div className="flex-1 bg-white rounded-lg shadow-md p-6">
+              <p className="italic text-gray-700 mb-4">
+                “Perfect for a family getaway. Our kids loved the amenities and we loved the peace and quiet.”
+              </p>
+              <div className="font-semibold text-[#82A33D]">– The Reyes Family</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ChatBot and Footer */}
+      <ChatBot />
+      <Footer />
     </>
   );
 }

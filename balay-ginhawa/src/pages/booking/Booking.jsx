@@ -51,10 +51,6 @@ export function Booking() {
   const [loading, setLoading] = useState(false);
 
 
-  const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 : 0;
-  const totalPrice = selectedRoom ? selectedRoom.price + foodPackageFee : 0;
-
-
   let filteredRoomTypes = roomTypes.filter(rt => activeTypes.includes(rt.id));
   if (occupancyFilter) {
     filteredRoomTypes = filteredRoomTypes.filter(rt => occupancyMap[rt.id] === occupancyFilter);
@@ -88,9 +84,30 @@ export function Booking() {
     setShowCheckout(true);
   }
 
+      let nights = 1;
+  if (checkIn && checkOut) {
+    const inDate = new Date(checkIn);
+    const outDate = new Date(checkOut);
+    nights = Math.max(
+      1,
+      Math.ceil((outDate - inDate) / (1000 * 60 * 60 * 24))
+    );
+  }
+
+  // Safety: ensure selectedRoom has a price
+  const roomPrice = selectedRoom?.price || 0;
+
+  // Recalculate total
+  const roomTotal = roomPrice * nights;
+  const foodPackageFee = guestInfo.foodPackage === "yes" ? 500 * guests : 0;
+  const totalPrice = roomTotal + foodPackageFee;
+
   async function handleCheckout() {
       if (loading) return; // prevent double click
   setLoading(true);
+
+
+
     const response = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
       method: "POST",
       headers: {
@@ -224,6 +241,8 @@ export function Booking() {
           onCheckout={handleCheckout}
           totalPrice={totalPrice}
           foodPackageFee={foodPackageFee}
+            roomTotal={roomTotal}
+  nights={nights}
         />
       )}
 
